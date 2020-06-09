@@ -3,7 +3,7 @@ import {getUserAgent} from './utils'
 
 const createBtnDom = (textMarker, styles) => {
     const defaultStyles = {
-      position: 'fixed',
+      position: 'absolute',
       textAlign: 'center',
       width: '80%',
       left: '10%',

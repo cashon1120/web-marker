@@ -105,7 +105,6 @@ class textMarker {
     }
     this.isMarked = false
     this.currentSelectedDom = []
-    this.selectedDom = target
     this.currentSelectedDom.push(target)
   }
 
@@ -128,21 +127,21 @@ class textMarker {
       return
     }
 
+   
     const {commonAncestorContainer} = this.selectedText.getRangeAt(0)
-    if(commonAncestorContainer.nodeType !== 3){
+    if(commonAncestorContainer.nodeType !== 3 || commonAncestorContainer.parentNode.className === this.MAKRED_CLASSNAME){
       return
     }
-
+    this.selectedDom = commonAncestorContainer.parentNode
     // 遇到以下节点时不处理, 可按需要添加
     const disabledElement = ['BUTTON', 'H1', 'H2', 'IMG']
     if (disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
       return
     }
-
-    // 选中多个节点时不处理, 这种只能鼠标划过的有效果, 所以得用别的方法处理
-    if (this.currentSelectedDom.length > 1) {
-      return
-    }
+    // // 选中多个节点时不处理, 这种只能鼠标划过的有效果, 所以得用别的方法处理
+    // if (this.currentSelectedDom.length > 1) {
+    //   return
+    // }
 
     setDomDisplay(this.btn_mark, 'block')
     setDomDisplay(this.btn_delete, 'none')
@@ -179,7 +178,6 @@ class textMarker {
         }
       }
     })
-    console.log(hasMultipleElement)
     if(hasMultipleElement) return
     this.show()
 
@@ -227,6 +225,7 @@ class textMarker {
   del() {
     this.selectedMarkers.forEach((marker, index) => {
       const dom = document.getElementById(this.deleteId)
+
       const parentNode = dom.parentNode
 
       if (marker.id.toString() === this.deleteId) {
@@ -244,15 +243,15 @@ class textMarker {
         } = marker
         const preDom = replaceTextNode.previousSibling
         const nextDom = replaceTextNode.nextSibling
-        if (preDom.nodeType === 3) {
+        if (preDom && preDom.nodeType === 3) {
           preDom.textContent = preDom.textContent + text
           parentNode.removeChild(replaceTextNode)
-          if (nextDom.nodeType === 3) {
+          if (nextDom && nextDom.nodeType === 3) {
             preDom.textContent = preDom.textContent + nextDom.textContent
             parentNode.removeChild(nextDom)
           }
         } else {
-          if (nextDom.nodeType === 3) {
+          if (nextDom && nextDom.nodeType === 3) {
             replaceTextNode.textContent = replaceTextNode.textContent + nextDom.textContent
             parentNode.removeChild(nextDom)
           }

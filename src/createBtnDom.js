@@ -4,7 +4,6 @@ import {getUserAgent} from './utils'
 const createBtnDom = (textMarker, styles) => {
     const defaultStyles = {
       position: 'fixed',
-      display: 'flex',
       textAlign: 'center',
       width: '80%',
       left: '10%',
@@ -34,9 +33,9 @@ const createBtnDom = (textMarker, styles) => {
     textMarker.btn_cancel = document.getElementById('webMarker_btn_cancel')
     textMarker.btn_delete = document.getElementById('webMarker_btn_delete')
 
-    textMarker.btn_mark.addEventListener(getUserAgent().eventName.mousedown, textMarker.mark)
-    textMarker.btn_cancel.addEventListener('click', textMarker.hide)
-    textMarker.btn_delete.addEventListener('click', textMarker.del)
+    textMarker.btn_mark.addEventListener(getUserAgent().eventName.mousedown, textMarker.mark.bind(textMarker))
+    textMarker.btn_cancel.addEventListener('click', textMarker.hide.bind(textMarker))
+    textMarker.btn_delete.addEventListener('click', textMarker.del.bind(textMarker))
   
   }
 

@@ -1,7 +1,6 @@
 import {setDomDisplay, setuuid, setTextSelected, getUserAgent, setDomMap, getDom} from './utils'
 import createBtnDom from './createBtnDom.js'
 
-
 /**
  * @param options 包含如下参数
  * @param defaultMarkers: 初始标记数据
@@ -62,7 +61,7 @@ class textMarker {
     // 创建按钮节点
     createBtnDom(this, options.btnStyles)
     // 监听事件
-    document.addEventListener("selectionchange", this.handleSelectionChange)
+    document.addEventListener('selectionchange', this.handleSelectionChange.bind(this))
 
     document.addEventListener(this.userAgent.eventName.mousedown, (e) => {
       const target = e.target
@@ -78,14 +77,14 @@ class textMarker {
       this.currentSelectedDom = []
       this.selectedDom = target
       this.currentSelectedDom.push(target)
-      document.addEventListener(this.userAgent.eventName.mousemove, this.handleMouseMove)
-      document.addEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp)
+      document.addEventListener(this.userAgent.eventName.mousemove, this.handleMouseMove.bind(this))
+      document.addEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp.bind(this))
     })
 
   }
 
   // 选中文本事件
-  handleSelectionChange = () => {
+  handleSelectionChange() {
     if (window.getSelection()) {
       this.selectedText = window.getSelection()
     } else {
@@ -94,14 +93,14 @@ class textMarker {
   }
 
   // 鼠标移动事件
-  handleMouseMove = e => {
+  handleMouseMove(e) {
     if (!this.currentSelectedDom.includes(e.target)) {
       this.currentSelectedDom.push(e.target)
     }
   }
 
   // 鼠标抬起事件
-  handleMouseUp = e => {
+  handleMouseUp(e){
     document.removeEventListener(this.userAgent.eventName.mousemove, this.handleMouseMove)
     document.removeEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp)
 
@@ -109,7 +108,7 @@ class textMarker {
       this.hide()
       return
     }
-
+   
     // 遇到以下节点时不处理, 可按需要添加
     const igonreDomElement = ['BUTTON', 'H1', 'H2', 'IMG']
     if (igonreDomElement.includes(this.selectedText.getRangeAt(0).commonAncestorContainer.parentNode.nodeName)) {
@@ -149,21 +148,21 @@ class textMarker {
 
   }
 
-  hide = () => {
+  hide(){
     setDomDisplay(this.btn_Box, 'none')
   }
 
-  show = () => {
+  show(){
     setDomDisplay(this.btn_Box, 'flex')
     this.btn_Box.style.top = this.pageY + 20 + 'px'
   }
 
-  mark = e => {
+  mark(e){
     e.preventDefault()
     e.stopPropagation()
     const text = this.selectedText.toString()
     const rang = this.selectedText.getRangeAt(0)
-    var span = document.createElement("span")
+    var span = document.createElement('span')
     span.className = 'selected_text'
     span.id = this.tempMarkerInfo.id
     span.style.color = this.markedStyles.color
@@ -176,7 +175,7 @@ class textMarker {
     this.save()
   }
 
-  save = () => {
+  save() {
     const markersJson = JSON.stringify(this.selectedMarkers)
     const userAgent = getUserAgent()
     if (userAgent.isAndroid) {
@@ -192,7 +191,7 @@ class textMarker {
     }
   }
 
-  del = () => {
+  del(){
     this.selectedMarkers.forEach((marker, index) => {
       const dom = document.getElementById(this.deleteId)
       const parentNode = dom.parentNode
@@ -222,6 +221,7 @@ class textMarker {
           }
         }
 
+
         this.selectedMarkers.forEach(item => {
           if(JSON.stringify(item.domDeeps) === JSON.stringify(domDeeps) && item.childIndex > childIndex){
             item.childIndex = item.childIndex - 2
@@ -236,7 +236,7 @@ class textMarker {
     })
   }
 
-  setDefaultMarkers = defaultMarkers => {
+  setDefaultMarkers(defaultMarkers){
     this.selectedMarkers = defaultMarkers
     defaultMarkers.forEach(marker => {
       const textNode = getDom(marker.domDeeps, marker.childIndex)
@@ -249,7 +249,7 @@ class textMarker {
         `${startHtml}${setTextSelected(replaceHtml, marker.id, this.markedStyles.color, this.markedStyles.backgroundColor)}${endHtml}`
       const parentNode = textNode.parentNode
       let parentHtml = parentNode.innerHTML
-      parentHtml = parentHtml.replace(/\&lt;/g, '<').replace(/\&gt;/g, '>')
+      parentHtml = parentHtml.replace(/&lt;/g, '<').replace(/&gt;/g, '>')
       parentNode.innerHTML = parentHtml
     })
   }

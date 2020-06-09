@@ -1,12 +1,16 @@
-const path = require('path');
-const resolve = function (filePath) {
-  return path.join(__dirname, './', filePath)
-}
+import { terser} from 'rollup-plugin-terser'
+import {eslint } from 'rollup-plugin-eslint';
+
 export default {
-  input: resolve('src/index.js'),
+  input: 'src/index.js',
   output: {
-    file: resolve('dist/bundle.js'),
+    file: 'dist/bundle.js',
     format: 'umd',
-    name: 'webMarker'
-  }
+    name: 'web-marker',
+    sourcemap: true
+  },
+  plugins: [
+    eslint(),
+    terser()
+  ]
 };

@@ -7,7 +7,7 @@ export const setuuid = () => {
 }
 
 export const setTextSelected = (text, id, color, bgColor) => {
-  return `<span class="selected_text" id="${id}" style="color: ${color}; background-color: ${bgColor}">${text}</span>`
+  return `<span class="web_marker_selected" id="${id}" style="color: ${color}; background-color: ${bgColor}">${text}</span>`
 }
 
 export const getUserAgent = () => {

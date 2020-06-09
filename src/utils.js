@@ -6,8 +6,20 @@ export const setuuid = () => {
   return new Date().getTime()
 }
 
-export const setTextSelected = (text, id, color, bgColor) => {
-  return `<span class="web_marker_selected" id="${id}" style="color: ${color}; background-color: ${bgColor}">${text}</span>`
+export const setTextSelected = (className, text, id, styles, type) => {
+  const span = document.createElement('span')
+  span.className = className
+  span.id = id
+  span.innerHTML = text
+  Object.keys(styles).forEach(key => {
+    span.style[key] = styles[key]
+  })
+  if(type){
+    return span
+  }
+  const div = document.createElement('div')
+  div.appendChild(span)
+  return div.innerHTML
 }
 
 export const getUserAgent = () => {

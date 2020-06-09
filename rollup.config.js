@@ -1,6 +1,8 @@
 import { terser} from 'rollup-plugin-terser'
 import {eslint } from 'rollup-plugin-eslint';
 
+const isPrd = process.env.NODE_ENV === 'production';
+
 export default {
   input: 'src/index.js',
   output: {
@@ -11,6 +13,6 @@ export default {
   },
   plugins: [
     eslint(),
-    terser()
+    isPrd && terser()
   ]
 };

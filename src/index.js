@@ -1,4 +1,11 @@
-import {setDomDisplay, setuuid, setTextSelected, getUserAgent, setDomMap, getDom} from './utils'
+import {
+  setDomDisplay,
+  setuuid,
+  setTextSelected,
+  getUserAgent,
+  setDomMap,
+  getDom
+} from './utils'
 import createBtnDom from './createBtnDom.js'
 
 /**
@@ -7,18 +14,21 @@ import createBtnDom from './createBtnDom.js'
  * @param markedStyles: 标记文本样式
  * @param btnStyles: 操作框样式
  * @param onSave: 标记后回调, 必填
-*/
+ */
 
 class textMarker {
   constructor(options) {
 
-    if(!options || !options.onSave) {
+    if (!options || !options.onSave) {
       throw new Error('options中的 onSave 选项为必填')
     }
 
-    if(typeof options.onSave !== 'function') {
+    if (typeof options.onSave !== 'function') {
       throw new Error('onSave 必须为一个函数')
     }
+
+    this.MAKRED_CLASSNAME = 'web_marker_selected'
+
 
     // 标记样式
     this.markedStyles = {
@@ -27,6 +37,7 @@ class textMarker {
       ...options.markedStyles
     }
 
+    // 回调
     this.onSave = options.onSave
 
     // 所有标记文本, 最后转换成json字符串保存到数据库
@@ -50,6 +61,9 @@ class textMarker {
     // 要删除的标记 id
     this.deleteId = ''
 
+    // 是否已标记
+    this.isMarked = false
+
     // 获取浏览器环境
     this.userAgent = getUserAgent()
 
@@ -62,25 +76,9 @@ class textMarker {
     createBtnDom(this, options.btnStyles)
     // 监听事件
     document.addEventListener('selectionchange', this.handleSelectionChange.bind(this))
-
-    document.addEventListener(this.userAgent.eventName.mousedown, (e) => {
-      const target = e.target
-      // 当选中的文本已经标记时的处理, 隐藏 "标记" 按钮, 显示 "删除" 按钮
-      if (target.className === 'selected_text') {
-        this.pageY = e.pageY
-        setDomDisplay(this.btn_mark, 'none')
-        setDomDisplay(this.btn_delete, 'block')
-        this.deleteId = e.target.id
-        this.show()
-        return
-      }
-      this.currentSelectedDom = []
-      this.selectedDom = target
-      this.currentSelectedDom.push(target)
-      document.addEventListener(this.userAgent.eventName.mousemove, this.handleMouseMove.bind(this))
-      document.addEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp.bind(this))
-    })
-
+    document.addEventListener(this.userAgent.eventName.mousedown, this.handleMouseDown.bind(this))
+    document.addEventListener(this.userAgent.eventName.mousemove, this.handleMouseMove.bind(this))
+    document.addEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp.bind(this))
   }
 
   // 选中文本事件
@@ -92,6 +90,25 @@ class textMarker {
     }
   }
 
+  // 鼠标按下
+  handleMouseDown(e) {
+    const target = e.target
+    // 当选中的文本已经标记时的处理, 隐藏 "标记" 按钮, 显示 "删除" 按钮
+    if (target.className === this.MAKRED_CLASSNAME) {
+      this.pageY = e.pageY
+      setDomDisplay(this.btn_mark, 'none')
+      setDomDisplay(this.btn_delete, 'block')
+      this.deleteId = e.target.id
+      this.show()
+      this.isMarked = true
+      return
+    }
+    this.isMarked = false
+    this.currentSelectedDom = []
+    this.selectedDom = target
+    this.currentSelectedDom.push(target)
+  }
+
   // 鼠标移动事件
   handleMouseMove(e) {
     if (!this.currentSelectedDom.includes(e.target)) {
@@ -100,29 +117,35 @@ class textMarker {
   }
 
   // 鼠标抬起事件
-  handleMouseUp(e){
-    document.removeEventListener(this.userAgent.eventName.mousemove, this.handleMouseMove)
-    document.removeEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp)
+  handleMouseUp(e) {
 
-    if (this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt){
+    if(this.isMarked){
+      return
+    }
+
+    if (this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt) {
       this.hide()
       return
     }
-   
-    // 遇到以下节点时不处理, 可按需要添加
-    const igonreDomElement = ['BUTTON', 'H1', 'H2', 'IMG']
-    if (igonreDomElement.includes(this.selectedText.getRangeAt(0).commonAncestorContainer.parentNode.nodeName)) {
+
+    const {commonAncestorContainer} = this.selectedText.getRangeAt(0)
+    if(commonAncestorContainer.nodeType !== 3){
       return
     }
 
-    // 选中多个节点时不处理
+    // 遇到以下节点时不处理, 可按需要添加
+    const disabledElement = ['BUTTON', 'H1', 'H2', 'IMG']
+    if (disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
+      return
+    }
+
+    // 选中多个节点时不处理, 这种只能鼠标划过的有效果, 所以得用别的方法处理
     if (this.currentSelectedDom.length > 1) {
       return
     }
 
     setDomDisplay(this.btn_mark, 'block')
     setDomDisplay(this.btn_delete, 'none')
-
 
     const {
       anchorOffset,
@@ -136,38 +159,47 @@ class textMarker {
         childIndex = i
       }
     }
-    const deeps = setDomMap(this.selectedDom, [])
+    const domDeeps = setDomMap(this.selectedDom, []).reverse()
+    const startIndex = Math.min(anchorOffset, focusOffset)
+    const endIndex = Math.max(anchorOffset, focusOffset)
     this.tempMarkerInfo = {
       id: setuuid(),
-      domDeeps: deeps.reverse(),
+      domDeeps,
       childIndex,
-      startIndex: Math.min(anchorOffset, focusOffset),
-      endIndex: Math.max(anchorOffset, focusOffset)
+      startIndex,
+      endIndex
     }
+
+    // 选择内容包含已标记处理
+    let hasMultipleElement = false
+    this.selectedMarkers.forEach(item => {
+      if (JSON.stringify(item.domDeeps) === JSON.stringify(domDeeps)) {
+        if(startIndex < item.startIndex && endIndex > item.endIndex){
+          hasMultipleElement = true
+        }
+      }
+    })
+    console.log(hasMultipleElement)
+    if(hasMultipleElement) return
     this.show()
 
   }
 
-  hide(){
+  hide() {
     setDomDisplay(this.btn_Box, 'none')
   }
 
-  show(){
+  show() {
     setDomDisplay(this.btn_Box, 'flex')
     this.btn_Box.style.top = this.pageY + 20 + 'px'
   }
 
-  mark(e){
+  mark(e) {
     e.preventDefault()
     e.stopPropagation()
     const text = this.selectedText.toString()
     const rang = this.selectedText.getRangeAt(0)
-    var span = document.createElement('span')
-    span.className = 'selected_text'
-    span.id = this.tempMarkerInfo.id
-    span.style.color = this.markedStyles.color
-    span.style.backgroundColor = this.markedStyles.backgroundColor
-    span.innerHTML = text
+    const span = setTextSelected(this.MAKRED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles, 1)
     rang.surroundContents(span);
     this.selectedMarkers.push(this.tempMarkerInfo)
     this.selectedText.removeAllRanges()
@@ -178,6 +210,7 @@ class textMarker {
   save() {
     const markersJson = JSON.stringify(this.selectedMarkers)
     const userAgent = getUserAgent()
+
     if (userAgent.isAndroid) {
       // window.jsObject...
     }
@@ -186,12 +219,12 @@ class textMarker {
       // window.webkit.jsObject.callBack.postMessage(this.selectedMarkers)
     }
 
-    if(this.onSave){
+    if (this.onSave) {
       this.onSave(markersJson)
     }
   }
 
-  del(){
+  del() {
     this.selectedMarkers.forEach((marker, index) => {
       const dom = document.getElementById(this.deleteId)
       const parentNode = dom.parentNode
@@ -204,18 +237,22 @@ class textMarker {
         // 当删除parentNode节点的前面的标记时, 修正后面标记相关参数
         // 删除一个标记, 需要把前后的两个节点(如果为文本节点的话)合并为一个节点
 
-        const {domDeeps, childIndex, endIndex } = marker
+        const {
+          domDeeps,
+          childIndex,
+          endIndex
+        } = marker
         const preDom = replaceTextNode.previousSibling
         const nextDom = replaceTextNode.nextSibling
-        if(preDom.nodeType === 3){
+        if (preDom.nodeType === 3) {
           preDom.textContent = preDom.textContent + text
           parentNode.removeChild(replaceTextNode)
-          if(nextDom.nodeType === 3){
+          if (nextDom.nodeType === 3) {
             preDom.textContent = preDom.textContent + nextDom.textContent
             parentNode.removeChild(nextDom)
           }
-        }else{
-          if(nextDom.nodeType === 3){
+        } else {
+          if (nextDom.nodeType === 3) {
             replaceTextNode.textContent = replaceTextNode.textContent + nextDom.textContent
             parentNode.removeChild(nextDom)
           }
@@ -223,7 +260,7 @@ class textMarker {
 
 
         this.selectedMarkers.forEach(item => {
-          if(JSON.stringify(item.domDeeps) === JSON.stringify(domDeeps) && item.childIndex > childIndex){
+          if (JSON.stringify(item.domDeeps) === JSON.stringify(domDeeps) && item.childIndex > childIndex) {
             item.childIndex = item.childIndex - 2
             item.startIndex = item.startIndex + endIndex
             item.endIndex = item.endIndex + endIndex
@@ -236,17 +273,17 @@ class textMarker {
     })
   }
 
-  setDefaultMarkers(defaultMarkers){
+  setDefaultMarkers(defaultMarkers) {
     this.selectedMarkers = defaultMarkers
     defaultMarkers.forEach(marker => {
       const textNode = getDom(marker.domDeeps, marker.childIndex)
-      if(!textNode) return
+      if (!textNode) return
       const html = textNode.textContent
       const startHtml = html.substr(0, marker.startIndex)
       const replaceHtml = html.substr(marker.startIndex, marker.endIndex - marker.startIndex)
       const endHtml = html.substr(marker.endIndex)
       textNode.textContent =
-        `${startHtml}${setTextSelected(replaceHtml, marker.id, this.markedStyles.color, this.markedStyles.backgroundColor)}${endHtml}`
+        `${startHtml}${setTextSelected(this.MAKRED_CLASSNAME, replaceHtml, marker.id, this.markedStyles)}${endHtml}`
       const parentNode = textNode.parentNode
       let parentHtml = parentNode.innerHTML
       parentHtml = parentHtml.replace(/&lt;/g, '<').replace(/&gt;/g, '>')

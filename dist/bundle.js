@@ -58,9 +58,6 @@
   };
 
   const createBtnDom = (textMarker, styles) => {
-
-    console.log(textMarker);
-
       const defaultStyles = {
         position: 'fixed',
         display: 'flex',
@@ -75,24 +72,23 @@
         color: '#fff',
         ...styles
       };
-
       const btnBox = document.createElement('div');
-      btnBox.id = 'webMarkerBtnBox';
 
+      btnBox.id = 'webMarkerBtnBox';
       Object.keys(defaultStyles).forEach(key => {
         btnBox.style[key] = defaultStyles[key];
       });
 
       btnBox.innerHTML = `
-      <div style="flex: 1" id="btn_mark">标记</div>
-      <div style="flex: 1" id="btn_delete">删除当前标记</div>
-      <div style="flex: 1" id="btn_cancel">取消</div>
+      <div style="flex: 1" id="webMarker_btn_mark">标记</div>
+      <div style="flex: 1" id="webMarker_btn_delete">删除当前标记</div>
+      <div style="flex: 1" id="webMarker_btn_cancel">取消</div>
     `;
       document.body.appendChild(btnBox);
       textMarker.btn_Box = document.getElementById('webMarkerBtnBox');
-      textMarker.btn_mark = document.getElementById('btn_mark');
-      textMarker.btn_cancel = document.getElementById('btn_cancel');
-      textMarker.btn_delete = document.getElementById('btn_delete');
+      textMarker.btn_mark = document.getElementById('webMarker_btn_mark');
+      textMarker.btn_cancel = document.getElementById('webMarker_btn_cancel');
+      textMarker.btn_delete = document.getElementById('webMarker_btn_delete');
 
       textMarker.btn_mark.addEventListener(getUserAgent().eventName.mousedown, textMarker.mark);
       textMarker.btn_cancel.addEventListener('click', textMarker.hide);
@@ -100,10 +96,24 @@
     
     };
 
+  /**
+   * @param options 包含如下参数
+   * @param defaultMarkers: 初始标记数据
+   * @param markedStyles: 标记文本样式
+   * @param btnStyles: 操作框样式
+   * @param onSave: 标记后回调, 必填
+  */
+
   class textMarker {
     constructor(options) {
 
+      if(!options || !options.onSave) {
+        throw new Error('options中的 onSave 选项为必填')
+      }
 
+      if(typeof options.onSave !== 'function') {
+        throw new Error('onSave 必须为一个函数')
+      }
 
       // 标记样式
       this.markedStyles = {
@@ -272,12 +282,33 @@
     del = () => {
       this.selectedMarkers.forEach((marker, index) => {
         const dom = document.getElementById(this.deleteId);
-        if (marker.id.toString() === this.deleteId) {
-          const replaceTextNode = document.createTextNode(dom.innerText);
-          dom.parentNode.replaceChild(replaceTextNode, dom);
+        const parentNode = dom.parentNode;
 
-          // 当删除同一节点的前面的标记时, 修正后面标记相关参数
+        if (marker.id.toString() === this.deleteId) {
+          const text = dom.innerText;
+          const replaceTextNode = document.createTextNode(text);
+          parentNode.replaceChild(replaceTextNode, dom);
+
+          // 当删除parentNode节点的前面的标记时, 修正后面标记相关参数
+          // 删除一个标记, 需要把前后的两个节点(如果为文本节点的话)合并为一个节点
+
           const {domDeeps, childIndex, endIndex } = marker;
+          const preDom = replaceTextNode.previousSibling;
+          const nextDom = replaceTextNode.nextSibling;
+          if(preDom.nodeType === 3){
+            preDom.textContent = preDom.textContent + text;
+            parentNode.removeChild(replaceTextNode);
+            if(nextDom.nodeType === 3){
+              preDom.textContent = preDom.textContent + nextDom.textContent;
+              parentNode.removeChild(nextDom);
+            }
+          }else {
+            if(nextDom.nodeType === 3){
+              replaceTextNode.textContent = replaceTextNode.textContent + nextDom.textContent;
+              parentNode.removeChild(nextDom);
+            }
+          }
+
           this.selectedMarkers.forEach(item => {
             if(JSON.stringify(item.domDeeps) === JSON.stringify(domDeeps) && item.childIndex > childIndex){
               item.childIndex = item.childIndex - 2;

@@ -4,7 +4,8 @@ import {
   setTextSelected,
   getUserAgent,
   setDomMap,
-  getDom
+  getDom,
+  compareArr
 } from './utils'
 import createBtnDom from './createBtnDom.js'
 
@@ -208,6 +209,8 @@ class textMarker {
     if (this.onSave) {
       this.onSave(markersJson)
     }
+
+    console.log(this.selectedMarkers)
   }
 
   del() {
@@ -246,16 +249,22 @@ class textMarker {
         }
 
 
+
         this.selectedMarkers.forEach(item => {
-          if (JSON.stringify(item.domDeeps) === JSON.stringify(domDeeps) && item.childIndex > childIndex) {
+          const result = compareArr(domDeeps, item.domDeeps)
+          if(result === 'sameNode' && item.childIndex > childIndex){
             item.childIndex = item.childIndex - 2
             item.startIndex = item.startIndex + endIndex
             item.endIndex = item.endIndex + endIndex
           }
+          const lastDomDeep = item.domDeeps[item.domDeeps.length - 1]
+          if(result === 'slibingNode' && lastDomDeep > childIndex){
+            item.domDeeps[item.domDeeps.length - 1] = lastDomDeep -2
+          }
         })
 
         this.selectedMarkers.splice(index, 1)
-        console.log(this.selectedMarkers)
+
         this.save()
       }
     })

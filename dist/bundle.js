@@ -69,6 +69,16 @@
     return dom.childNodes[childIndex]
   };
 
+  const compareArr = (arr1, arr2) => {
+    if (JSON.stringify(arr1) === JSON.stringify(arr2)){
+      return 'sameNode'
+    }
+
+    if(arr2.length === arr1.length + 1 && JSON.stringify([...arr1, arr2[arr2.length-1]]) === JSON.stringify(arr2)){
+      return 'slibingNode'
+    }
+  };
+
   const createBtnDom = (textMarker, styles) => {
       const defaultStyles = {
         position: 'absolute',
@@ -300,6 +310,8 @@
       if (this.onSave) {
         this.onSave(markersJson);
       }
+
+      console.log(this.selectedMarkers);
     }
 
     del() {
@@ -338,16 +350,22 @@
           }
 
 
+
           this.selectedMarkers.forEach(item => {
-            if (JSON.stringify(item.domDeeps) === JSON.stringify(domDeeps) && item.childIndex > childIndex) {
+            const result = compareArr(domDeeps, item.domDeeps);
+            if(result === 'sameNode' && item.childIndex > childIndex){
               item.childIndex = item.childIndex - 2;
               item.startIndex = item.startIndex + endIndex;
               item.endIndex = item.endIndex + endIndex;
             }
+            const lastDomDeep = item.domDeeps[item.domDeeps.length - 1];
+            if(result === 'slibingNode' && lastDomDeep > childIndex){
+              item.domDeeps[item.domDeeps.length - 1] = lastDomDeep -2;
+            }
           });
 
           this.selectedMarkers.splice(index, 1);
-          console.log(this.selectedMarkers);
+
           this.save();
         }
       });

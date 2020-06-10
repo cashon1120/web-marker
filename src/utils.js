@@ -63,3 +63,13 @@ export const getDom = (deeps, childIndex) => {
   })
   return dom.childNodes[childIndex]
 }
+
+export const compareArr = (arr1, arr2) => {
+  if (JSON.stringify(arr1) === JSON.stringify(arr2)){
+    return 'sameNode'
+  }
+
+  if(arr2.length === arr1.length + 1 && JSON.stringify([...arr1, arr2[arr2.length-1]]) === JSON.stringify(arr2)){
+    return 'slibingNode'
+  }
+}

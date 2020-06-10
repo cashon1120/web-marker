@@ -49,9 +49,6 @@ class textMarker {
     // 选中文本对象, 从 window.getSelection() 中拿
     this.selectedText = {}
 
-    // 当前选中的节点, 多个节点不处理
-    this.currentSelectedDom = []
-
     // 操作框显示位置
     this.pageY = 0
 
@@ -77,7 +74,6 @@ class textMarker {
     // 监听事件
     document.addEventListener('selectionchange', this.handleSelectionChange.bind(this))
     document.addEventListener(this.userAgent.eventName.mousedown, this.handleMouseDown.bind(this))
-    document.addEventListener(this.userAgent.eventName.mousemove, this.handleMouseMove.bind(this))
     document.addEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp.bind(this))
   }
 
@@ -104,15 +100,6 @@ class textMarker {
       return
     }
     this.isMarked = false
-    this.currentSelectedDom = []
-    this.currentSelectedDom.push(target)
-  }
-
-  // 鼠标移动事件
-  handleMouseMove(e) {
-    if (!this.currentSelectedDom.includes(e.target)) {
-      this.currentSelectedDom.push(e.target)
-    }
   }
 
   // 鼠标抬起事件
@@ -123,25 +110,26 @@ class textMarker {
     }
 
     if (this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt) {
-      this.hide()
       return
     }
+    
+    setTimeout(() => {
+      if (this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt) {
+        this.hide()
+      }
+    }, 0);
 
-   
     const {commonAncestorContainer} = this.selectedText.getRangeAt(0)
     if(commonAncestorContainer.nodeType !== 3 || commonAncestorContainer.parentNode.className === this.MAKRED_CLASSNAME){
       return
     }
+
     this.selectedDom = commonAncestorContainer.parentNode
     // 遇到以下节点时不处理, 可按需要添加
     const disabledElement = ['BUTTON', 'H1', 'H2', 'IMG']
     if (disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
       return
     }
-    // // 选中多个节点时不处理, 这种只能鼠标划过的有效果, 所以得用别的方法处理
-    // if (this.currentSelectedDom.length > 1) {
-    //   return
-    // }
 
     setDomDisplay(this.btn_mark, 'block')
     setDomDisplay(this.btn_delete, 'none')
@@ -208,7 +196,7 @@ class textMarker {
   save() {
     const markersJson = JSON.stringify(this.selectedMarkers)
     const userAgent = getUserAgent()
-
+    this.hide()
     if (userAgent.isAndroid) {
       // window.jsObject...
     }
@@ -223,12 +211,12 @@ class textMarker {
   }
 
   del() {
+
     this.selectedMarkers.forEach((marker, index) => {
-      const dom = document.getElementById(this.deleteId)
-
-      const parentNode = dom.parentNode
-
+     
       if (marker.id.toString() === this.deleteId) {
+        const dom = document.getElementById(this.deleteId)
+        const parentNode = dom.parentNode
         const text = dom.innerText
         const replaceTextNode = document.createTextNode(text)
         parentNode.replaceChild(replaceTextNode, dom)
@@ -267,12 +255,14 @@ class textMarker {
         })
 
         this.selectedMarkers.splice(index, 1)
+        console.log(this.selectedMarkers)
         this.save()
       }
     })
   }
 
   setDefaultMarkers(defaultMarkers) {
+    console.log(defaultMarkers)
     this.selectedMarkers = defaultMarkers
     defaultMarkers.forEach(marker => {
       const textNode = getDom(marker.domDeeps, marker.childIndex)

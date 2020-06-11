@@ -1,6 +1,5 @@
 import {getUserAgent} from './utils'
 
-
 const createBtnDom = (textMarker, styles) => {
     const defaultStyles = {
       position: 'absolute',
@@ -24,7 +23,7 @@ const createBtnDom = (textMarker, styles) => {
 
     btnBox.innerHTML = `
       <div style="flex: 1" id="webMarker_btn_mark">标记</div>
-      <div style="flex: 1" id="webMarker_btn_delete">删除当前标记</div>
+      <div style="flex: 1" id="webMarker_btn_delete">删除标记</div>
       <div style="flex: 1" id="webMarker_btn_cancel">取消</div>
     `
     document.body.appendChild(btnBox)

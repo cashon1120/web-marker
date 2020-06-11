@@ -29,10 +29,8 @@
   window.addEventListener('load', () => {
     const defaultMarkers = JSON.parse(localStorage.getItem('markers'))
 //  localStorage.removeItem('markers')
-    const myTextMarker = new window.webMarker({
+    const myTextMarker = new window.WebTextMarker({
       defaultMarkers,
-      markedStyles: {},
-      btnStyles: {},
       onSave: (markersJson) => {
         localStorage.setItem('markers', markersJson)
       }

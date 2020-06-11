@@ -74,7 +74,7 @@
 
       btnBox.innerHTML = `
       <div style="flex: 1" id="webMarker_btn_mark">标记</div>
-      <div style="flex: 1" id="webMarker_btn_delete">删除当前标记</div>
+      <div style="flex: 1" id="webMarker_btn_delete">删除标记</div>
       <div style="flex: 1" id="webMarker_btn_cancel">取消</div>
     `;
       document.body.appendChild(btnBox);
@@ -90,14 +90,34 @@
     };
 
   /**
-   * @param options 包含如下参数
-   * @param defaultMarkers: 初始标记数据
-   * @param markedStyles: 标记文本样式
-   * @param btnStyles: 操作框样式
-   * @param onSave: 标记后回调, 必填
+   * @class Marker
+   * @param id: id
+   * @param parentClassName: 父节点className, 对应 selectedText 
+   * @param childIndex: 操作框样式
+   * @param start: 标记后回调, 必填
+   * @param end: 标记后回调, 必填
+   */
+  class Marker {
+    constructor(id, parentClassName, childIndex, start, end){
+      this.id = id;
+      this.childIndex = childIndex;
+      this.start = start;
+      this.end = end;
+      if(parentClassName){
+        this.parentClassName = parentClassName;
+      }
+    }
+  }
+
+  /**
+   * @class WebTextMarker
+   * @param options.defaultMarkers: 初始标记数据
+   * @param options.markedStyles: 标记文本样式
+   * @param options.btnStyles: 操作框样式
+   * @param options.onSave: 标记后回调, 必填
    */
 
-  class textMarker {
+  class WebTextMarker {
     constructor(options) {
 
       if (!options || !options.onSave) {
@@ -108,8 +128,15 @@
         throw new Error('onSave 必须为一个函数')
       }
 
-      this.MAKRED_CLASSNAME = 'web_marker_selected';
+      if(options.markedStyles && Object.prototype.toString.call(options.markedStyles) === '[object Object]'){
+        throw new Error('defaultMarkers 必须为一个对象')
+      }
 
+      if(options.btnStyles && Object.prototype.toString.call(options.btnStyles) === '[object Object]'){
+        throw new Error('btnStyles 必须为一个对象')
+      }
+
+      this.MAKRED_CLASSNAME = 'web_text_marker';
 
       // 标记样式
       this.markedStyles = {
@@ -232,12 +259,7 @@
       const endIndex = Math.max(anchorOffset, focusOffset);
       const className = commonAncestorContainer.parentNode.className.split(' ');
       const parentClassName = className[className.length - 1];
-      this.tempMarkerInfo = {
-        id: setuuid(),
-        parentClassName,
-        startIndex,
-        endIndex
-      };
+      this.tempMarkerInfo = new Marker(setuuid(), parentClassName, 0, startIndex, endIndex);
       this.show();
 
     }
@@ -261,13 +283,13 @@
       const {
         parentClassName,
         id,
-        startIndex,
-        endIndex
+        start,
+        end
       } = this.tempMarkerInfo;
       const newMark = {
         id,
-        startIndex,
-        endIndex
+        start,
+        end
       };
 
       if (!this.selectedMarkers[parentClassName]) {
@@ -295,12 +317,7 @@
         }
         this.selectedMarkers[parentClassName].forEach(marker => {
           if (dom.childNodes[i].id == marker.id) {
-            newMarkerArr.push({
-              id: marker.id,
-              startIndex: preNodeLength,
-              endIndex: preNodeLength + dom.childNodes[i].textContent.length,
-              childIndex: childIndex
-            });
+            newMarkerArr.push(new Marker(marker.id, '', childIndex, preNodeLength, preNodeLength + dom.childNodes[i].textContent.length,));
             childIndex += 2;
           }
 
@@ -354,13 +371,14 @@
 
     setDefaultMarkers() {
       const defaultMarkers = this.selectedMarkers;
+      console.log(defaultMarkers);
       Object.keys(defaultMarkers).forEach(className => {
         const dom = document.getElementsByClassName(className)[0];
         defaultMarkers[className].forEach(marker => {
           const currentNode = dom.childNodes[marker.childIndex];
-          currentNode.splitText(marker.startIndex);
+          currentNode.splitText(marker.start);
           const nextNode = currentNode.nextSibling;
-          nextNode.splitText(marker.endIndex - marker.startIndex);
+          nextNode.splitText(marker.end - marker.start);
           const markedNode = setTextSelected(this.MAKRED_CLASSNAME, nextNode.textContent, marker.id, this.markedStyles);
           dom.replaceChild(markedNode, nextNode);
         });
@@ -368,7 +386,7 @@
     }
   }
 
-  window.webMarker = textMarker;
+  window.WebTextMarker = WebTextMarker;
 
 })));
 //# sourceMappingURL=bundle.js.map

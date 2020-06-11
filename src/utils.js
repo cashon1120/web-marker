@@ -33,42 +33,6 @@ export const getUserAgent = () => {
   }
 }
 
-export const setDomMap = (dom, arr = []) => {
-  if (dom.parentNode) {
-    for (let i = 0; i < dom.parentNode.childNodes.length; i++) {
-      if (dom.parentNode.childNodes[i] === dom) {
-        arr.push(i)
-        if (dom.parentNode !== document.body) {
-          setDomMap(dom.parentNode, arr)
-        }
-      }
-    }
-  }
-  return arr
-}
-
-export const getDom = (deeps, childIndex) => {
-  let dom = document.body
-  deeps.forEach(domIndex => {
-    for (let i = 0; i < dom.childNodes.length; i++) {
-      if (i === domIndex) {
-        dom = dom.childNodes[i]
-      }
-    }
-  })
-  return dom.childNodes[childIndex]
-}
-
-export const compareArr = (arr1, arr2) => {
-  if (JSON.stringify(arr1) === JSON.stringify(arr2)) {
-    return 'sameNode'
-  }
-
-  if (arr2.length === arr1.length + 1 && JSON.stringify([...arr1, arr2[arr2.length - 1]]) === JSON.stringify(arr2)) {
-    return 'slibingNode'
-  }
-}
-
 export const setMarkClassName = (dom, index = 1) => {
   if (dom.childNodes) {
     for (let i = 0; i < dom.childNodes.length; i++) {

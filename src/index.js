@@ -156,10 +156,17 @@ class WebTextMarker {
       }
     }, 0);
 
+
+    console.log(this.selectedText)
+    console.log(this.selectedText.getRangeAt(0))
+
     const {
       commonAncestorContainer
     } = this.selectedText.getRangeAt(0)
 
+    
+    // 判断是否选中了多个， 如果只选中了一个节点 nodeType === 3
+    // 还有一种判断方式, getRangeAt(0).endContainer !== getRangeAt(0).startContainer 意味着选中了多个节点
     if (commonAncestorContainer.nodeType !== 3 || commonAncestorContainer.parentNode.className === this.MAKRED_CLASSNAME) {
       return
     }
@@ -177,14 +184,13 @@ class WebTextMarker {
       anchorOffset,
       focusOffset
     } = this.selectedText
-    this.pageY = e.pageY
+
 
     const startIndex = Math.min(anchorOffset, focusOffset)
     const endIndex = Math.max(anchorOffset, focusOffset)
     const className = commonAncestorContainer.parentNode.className.split(' ')
     let parentClassName = className[className.length - 1]
     this.tempMarkerInfo = new Marker(setuuid(), parentClassName, 0, startIndex, endIndex)
-
 
     const text = this.selectedText.toString()
     const rang = this.selectedText.getRangeAt(0)
@@ -197,15 +203,20 @@ class WebTextMarker {
 
   hide() {
     setDomDisplay(this.btn_Box, 'none')
-    if(!this.tempMarkDom) return
+    if(!this.tempMarkDom || this.tempMarkDom.className === this.MAKRED_CLASSNAME) return
     mergeTextNode(this.tempMarkDom)
   }
 
   show() {
     setDomDisplay(this.btn_Box, 'flex')
-    const position = this.tempMarkDom.getBoundingClientRect()
-    this.btn_Box.style.top = position.top + window.scrollY - 50 + 'px'
-    this.arrow.style.left = position.left + this.tempMarkDom.offsetWidth / 2 - 5 + 'px'
+    const domAttr = this.tempMarkDom.getBoundingClientRect()
+    this.btn_Box.style.top = domAttr.top + window.scrollY - 50 + 'px'
+    let left =  domAttr.left + this.tempMarkDom.offsetWidth / 2 - 5
+    console.log(domAttr)
+    if(domAttr.width + domAttr.left > window.innerWidth){
+      left = domAttr.left
+    }
+    this.arrow.style.left = left + 'px'
   }
 
   mark(e) {
@@ -221,8 +232,7 @@ class WebTextMarker {
     } else {
       this.selectedMarkers[parentClassName].push(this.tempMarkerInfo)
     }
-    const newMarkerArr = this.resetMarker(parentClassName)
-    this.selectedMarkers[parentClassName] = newMarkerArr
+    this.resetMarker(parentClassName)
     this.selectedText.removeAllRanges()
     this.tempMarkDom = null
     this.save()
@@ -247,7 +257,11 @@ class WebTextMarker {
         }
       })
     }
-    return newMarkerArr
+    if(newMarkerArr.length > 0){
+      this.selectedMarkers[parentClassName] = newMarkerArr
+    } else{
+      delete this.selectedMarkers[parentClassName]
+    }
   }
 
   save() {
@@ -275,8 +289,7 @@ class WebTextMarker {
     const className = dom.parentNode.className.split(' ')
     const parentClassName = className[className.length - 1]
     mergeTextNode(dom)
-    const newMarkerArr = this.resetMarker(parentClassName)
-    this.selectedMarkers[parentClassName] = newMarkerArr
+    this.resetMarker(parentClassName)
     this.save()
   }
 

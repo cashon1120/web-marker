@@ -86,8 +86,9 @@
       const defaultStyles = {
         position: 'absolute',
         textAlign: 'center',
-        width: '98%',
-        left: '1%',
+        width: '100%',
+        left: 0,
+        padding: '0 15px',
         height: '35px',
         lineHeight: '35px',
         backgroundColor: 'black',
@@ -95,6 +96,7 @@
         display: 'none',
         color: '#fff',
         transition: 'all .3s',
+        boxSizing: 'border-box',
         ...styles
       };
       const btnBox = document.createElement('div');
@@ -103,17 +105,16 @@
       Object.keys(defaultStyles).forEach(key => {
         btnBox.style[key] = defaultStyles[key];
       });
-
+      btnBox.style.backgroundColor = 'transparent';
+      const divStyle = `flex: 1; background-color: ${defaultStyles.backgroundColor}; border-right: 1px solid rgba(255,255,255,.3)`; 
       btnBox.innerHTML = `
-      <div style="flex: 1" id="webMarker_btn_mark">标记</div>
-      <div style="flex: 1" id="webMarker_btn_delete">删除标记</div>
-      <div style="flex: 1" id="webMarker_btn_cancel">取消</div>
+      <div style="${divStyle}" id="webMarker_btn_mark">标记</div>
+      <div style="${divStyle}" id="webMarker_btn_delete">删除标记</div>
+      <div style="${divStyle}; border-right: 0" id="webMarker_btn_cancel">取消</div>
       <div id="webMarker_arrow"></div>
     `;
 
-
       document.body.appendChild(btnBox);
-
 
       const arrow = document.getElementById('webMarker_arrow');
       arrow.style.position = 'absolute';
@@ -285,10 +286,17 @@
         }
       }, 0);
 
+
+      console.log(this.selectedText);
+      console.log(this.selectedText.getRangeAt(0));
+
       const {
         commonAncestorContainer
       } = this.selectedText.getRangeAt(0);
 
+      
+      // 判断是否选中了多个， 如果只选中了一个节点 nodeType === 3
+      // 还有一种判断方式, getRangeAt(0).endContainer !== getRangeAt(0).startContainer 意味着选中了多个节点
       if (commonAncestorContainer.nodeType !== 3 || commonAncestorContainer.parentNode.className === this.MAKRED_CLASSNAME) {
         return
       }
@@ -306,14 +314,13 @@
         anchorOffset,
         focusOffset
       } = this.selectedText;
-      this.pageY = e.pageY;
+
 
       const startIndex = Math.min(anchorOffset, focusOffset);
       const endIndex = Math.max(anchorOffset, focusOffset);
       const className = commonAncestorContainer.parentNode.className.split(' ');
       let parentClassName = className[className.length - 1];
       this.tempMarkerInfo = new Marker(setuuid(), parentClassName, 0, startIndex, endIndex);
-
 
       const text = this.selectedText.toString();
       const rang = this.selectedText.getRangeAt(0);
@@ -326,15 +333,20 @@
 
     hide() {
       setDomDisplay(this.btn_Box, 'none');
-      if(!this.tempMarkDom) return
+      if(!this.tempMarkDom || this.tempMarkDom.className === this.MAKRED_CLASSNAME) return
       mergeTextNode(this.tempMarkDom);
     }
 
     show() {
       setDomDisplay(this.btn_Box, 'flex');
-      const position = this.tempMarkDom.getBoundingClientRect();
-      this.btn_Box.style.top = position.top + window.scrollY - 50 + 'px';
-      this.arrow.style.left = position.left + this.tempMarkDom.offsetWidth / 2 - 5 + 'px';
+      const domAttr = this.tempMarkDom.getBoundingClientRect();
+      this.btn_Box.style.top = domAttr.top + window.scrollY - 50 + 'px';
+      let left =  domAttr.left + this.tempMarkDom.offsetWidth / 2 - 5;
+      console.log(domAttr);
+      if(domAttr.width + domAttr.left > window.innerWidth){
+        left = domAttr.left;
+      }
+      this.arrow.style.left = left + 'px';
     }
 
     mark(e) {
@@ -350,8 +362,7 @@
       } else {
         this.selectedMarkers[parentClassName].push(this.tempMarkerInfo);
       }
-      const newMarkerArr = this.resetMarker(parentClassName);
-      this.selectedMarkers[parentClassName] = newMarkerArr;
+      this.resetMarker(parentClassName);
       this.selectedText.removeAllRanges();
       this.tempMarkDom = null;
       this.save();
@@ -376,7 +387,11 @@
           }
         });
       }
-      return newMarkerArr
+      if(newMarkerArr.length > 0){
+        this.selectedMarkers[parentClassName] = newMarkerArr;
+      } else {
+        delete this.selectedMarkers[parentClassName];
+      }
     }
 
     save() {
@@ -397,8 +412,7 @@
       const className = dom.parentNode.className.split(' ');
       const parentClassName = className[className.length - 1];
       mergeTextNode(dom);
-      const newMarkerArr = this.resetMarker(parentClassName);
-      this.selectedMarkers[parentClassName] = newMarkerArr;
+      this.resetMarker(parentClassName);
       this.save();
     }
 

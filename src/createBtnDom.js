@@ -4,8 +4,9 @@ const createBtnDom = (textMarker, styles) => {
     const defaultStyles = {
       position: 'absolute',
       textAlign: 'center',
-      width: '98%',
-      left: '1%',
+      width: '100%',
+      left: 0,
+      padding: '0 15px',
       height: '35px',
       lineHeight: '35px',
       backgroundColor: 'black',
@@ -13,6 +14,7 @@ const createBtnDom = (textMarker, styles) => {
       display: 'none',
       color: '#fff',
       transition: 'all .3s',
+      boxSizing: 'border-box',
       ...styles
     }
     const btnBox = document.createElement('div')
@@ -21,17 +23,16 @@ const createBtnDom = (textMarker, styles) => {
     Object.keys(defaultStyles).forEach(key => {
       btnBox.style[key] = defaultStyles[key]
     })
-
+    btnBox.style.backgroundColor = 'transparent'
+    const divStyle = `flex: 1; background-color: ${defaultStyles.backgroundColor}; border-right: 1px solid rgba(255,255,255,.3)` 
     btnBox.innerHTML = `
-      <div style="flex: 1" id="webMarker_btn_mark">标记</div>
-      <div style="flex: 1" id="webMarker_btn_delete">删除标记</div>
-      <div style="flex: 1" id="webMarker_btn_cancel">取消</div>
+      <div style="${divStyle}" id="webMarker_btn_mark">标记</div>
+      <div style="${divStyle}" id="webMarker_btn_delete">删除标记</div>
+      <div style="${divStyle}; border-right: 0" id="webMarker_btn_cancel">取消</div>
       <div id="webMarker_arrow"></div>
     `
 
-
     document.body.appendChild(btnBox)
-
 
     const arrow = document.getElementById('webMarker_arrow')
     arrow.style.position = 'absolute'

@@ -36,10 +36,13 @@ export const getUserAgent = () => {
 export const setMarkClassName = (dom, index = 1) => {
   if (dom.childNodes) {
     for (let i = 0; i < dom.childNodes.length; i++) {
-      if (dom.childNodes[i].nodeType === 1) {
-        dom.childNodes[i].className = dom.childNodes[i].className ? dom.childNodes[i].className + ` web-marker-${index}-${i}` : `web-marker-${index}-${i}`
-        if (dom.childNodes[i].childNodes.length > 0) {
-          setMarkClassName(dom.childNodes[i], index + 1 + `-${i}`)
+      const childNode = dom.childNodes[i]
+      if (childNode.nodeType === 1) {
+        const ingoreNodes = ['BR', 'HR']
+        if(ingoreNodes.includes(childNode.nodeName)) return
+        childNode.className = childNode.className ? childNode.className + ` _WM-${index}-${i}` : `_WM-${index}-${i}`
+        if (childNode.childNodes.length > 0) {
+          setMarkClassName(childNode, index + 1 + `-${i}`)
         }
       }
     }

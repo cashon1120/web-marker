@@ -201,24 +201,12 @@ class WebTextMarker {
     const rang = this.selectedText.getRangeAt(0)
     const span = setTextSelected(this.MAKRED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles)
     rang.surroundContents(span);
-    const {
-      parentClassName,
-      id,
-      start,
-      end
-    } = this.tempMarkerInfo
-    const newMark = {
-      id,
-      start,
-      end
-    }
-
+    const {parentClassName} = this.tempMarkerInfo
     if (!this.selectedMarkers[parentClassName]) {
-      this.selectedMarkers[parentClassName] = [newMark]
+      this.selectedMarkers[parentClassName] = [this.tempMarkerInfo]
     } else {
-      this.selectedMarkers[parentClassName].push(newMark)
+      this.selectedMarkers[parentClassName].push(this.tempMarkerInfo)
     }
-
     const newMarkerArr = this.resetMarker(parentClassName)
     this.selectedMarkers[parentClassName] = newMarkerArr
     this.selectedText.removeAllRanges()
@@ -229,19 +217,19 @@ class WebTextMarker {
   resetMarker(parentClassName) {
     const dom = document.getElementsByClassName(parentClassName)[0]
     const newMarkerArr = []
-    let childIndex = 0
     let preNodeLength = 0
     for (let i = 0; i < dom.childNodes.length; i++) {
       const node = dom.childNodes[i]
-      if (node.nodeType !== 1 || node.className.indexOf(this.MAKRED_CLASSNAME) < 0) {
+      if (node.nodeName === '#text') {
         preNodeLength = node.textContent.length
       }
+      // childIndex 为什么是 i - 1 ? 根据当前已经标记节点索引, 在后面反序列的时候才能找到正确位置
+      // 比如当前节点内容为"xxx <标记节点>ooo</标记节点>", i 就是 1, 反序列的时候其实他是处于 0 的位置 
+      const childIndex = i - 1  
       this.selectedMarkers[parentClassName].forEach(marker => {
         if (dom.childNodes[i].id == marker.id) {
-          newMarkerArr.push(new Marker(marker.id, '', childIndex, preNodeLength, preNodeLength + dom.childNodes[i].textContent.length, ))
-          childIndex += 2
+          newMarkerArr.push(new Marker(marker.id, '', childIndex, preNodeLength, preNodeLength + node.textContent.length))
         }
-
       })
     }
     return newMarkerArr
@@ -299,7 +287,6 @@ class WebTextMarker {
 
   setDefaultMarkers() {
     const defaultMarkers = this.selectedMarkers
-    console.log(defaultMarkers)
     Object.keys(defaultMarkers).forEach(className => {
       const dom = document.getElementsByClassName(className)[0]
       defaultMarkers[className].forEach(marker => {

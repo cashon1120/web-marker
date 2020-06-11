@@ -6,7 +6,7 @@ export const setuuid = () => {
   return new Date().getTime()
 }
 
-export const setTextSelected = (className, text, id, styles, type) => {
+export const setTextSelected = (className, text, id, styles) => {
   const span = document.createElement('span')
   span.className = className
   span.id = id
@@ -14,12 +14,7 @@ export const setTextSelected = (className, text, id, styles, type) => {
   Object.keys(styles).forEach(key => {
     span.style[key] = styles[key]
   })
-  if(type){
-    return span
-  }
-  const div = document.createElement('div')
-  div.appendChild(span)
-  return div.innerHTML
+  return span
 }
 
 export const getUserAgent = () => {
@@ -65,11 +60,24 @@ export const getDom = (deeps, childIndex) => {
 }
 
 export const compareArr = (arr1, arr2) => {
-  if (JSON.stringify(arr1) === JSON.stringify(arr2)){
+  if (JSON.stringify(arr1) === JSON.stringify(arr2)) {
     return 'sameNode'
   }
 
-  if(arr2.length === arr1.length + 1 && JSON.stringify([...arr1, arr2[arr2.length-1]]) === JSON.stringify(arr2)){
+  if (arr2.length === arr1.length + 1 && JSON.stringify([...arr1, arr2[arr2.length - 1]]) === JSON.stringify(arr2)) {
     return 'slibingNode'
+  }
+}
+
+export const setMarkClassName = (dom, index = 1) => {
+  if (dom.childNodes) {
+    for (let i = 0; i < dom.childNodes.length; i++) {
+      if (dom.childNodes[i].nodeType === 1) {
+        dom.childNodes[i].className = dom.childNodes[i].className ? dom.childNodes[i].className + ` web-marker-${index}-${i}` : `web-marker-${index}-${i}`
+        if (dom.childNodes[i].childNodes.length > 0) {
+          setMarkClassName(dom.childNodes[i], index + 1 + `-${i}`)
+        }
+      }
+    }
   }
 }

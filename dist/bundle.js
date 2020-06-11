@@ -11,7 +11,7 @@
     return new Date().getTime()
   };
 
-  const setTextSelected = (className, text, id, styles, type) => {
+  const setTextSelected = (className, text, id, styles) => {
     const span = document.createElement('span');
     span.className = className;
     span.id = id;
@@ -19,12 +19,7 @@
     Object.keys(styles).forEach(key => {
       span.style[key] = styles[key];
     });
-    if(type){
-      return span
-    }
-    const div = document.createElement('div');
-    div.appendChild(span);
-    return div.innerHTML
+    return span
   };
 
   const getUserAgent = () => {
@@ -43,39 +38,16 @@
     }
   };
 
-  const setDomMap = (dom, arr = []) => {
-    if (dom.parentNode) {
-      for (let i = 0; i < dom.parentNode.childNodes.length; i++) {
-        if (dom.parentNode.childNodes[i] === dom) {
-          arr.push(i);
-          if (dom.parentNode !== document.body) {
-            setDomMap(dom.parentNode, arr);
+  const setMarkClassName = (dom, index = 1) => {
+    if (dom.childNodes) {
+      for (let i = 0; i < dom.childNodes.length; i++) {
+        if (dom.childNodes[i].nodeType === 1) {
+          dom.childNodes[i].className = dom.childNodes[i].className ? dom.childNodes[i].className + ` web-marker-${index}-${i}` : `web-marker-${index}-${i}`;
+          if (dom.childNodes[i].childNodes.length > 0) {
+            setMarkClassName(dom.childNodes[i], index + 1 + `-${i}`);
           }
         }
       }
-    }
-    return arr
-  };
-
-  const getDom = (deeps, childIndex) => {
-    let dom = document.body;
-    deeps.forEach(domIndex => {
-      for (let i = 0; i < dom.childNodes.length; i++) {
-        if (i === domIndex) {
-          dom = dom.childNodes[i];
-        }
-      }
-    });
-    return dom.childNodes[childIndex]
-  };
-
-  const compareArr = (arr1, arr2) => {
-    if (JSON.stringify(arr1) === JSON.stringify(arr2)){
-      return 'sameNode'
-    }
-
-    if(arr2.length === arr1.length + 1 && JSON.stringify([...arr1, arr2[arr2.length-1]]) === JSON.stringify(arr2)){
-      return 'slibingNode'
     }
   };
 
@@ -150,7 +122,7 @@
       this.onSave = options.onSave;
 
       // 所有标记文本, 最后转换成json字符串保存到数据库
-      this.selectedMarkers = [];
+      this.selectedMarkers = {};
 
       // 当前操作dom, 目前只能是一个
       this.selectedDom = null;
@@ -173,13 +145,18 @@
       // 获取浏览器环境
       this.userAgent = getUserAgent();
 
+      // 给每个节点加上特殊标识, 方便后面操作
+      setMarkClassName(document.body);
+
       // 当数据库有标记数据时, 设置标记状态
-      if (Array.isArray(options.defaultMarkers) && options.defaultMarkers.length > 0) {
-        this.setDefaultMarkers(options.defaultMarkers);
+      if (options.defaultMarkers && Object.keys(options.defaultMarkers).length > 0) {
+        this.selectedMarkers = options.defaultMarkers;
+        this.setDefaultMarkers();
       }
 
       // 创建按钮节点
       createBtnDom(this, options.btnStyles);
+
       // 监听事件
       document.addEventListener('selectionchange', this.handleSelectionChange.bind(this));
       document.addEventListener(this.userAgent.eventName.mousedown, this.handleMouseDown.bind(this));
@@ -214,22 +191,24 @@
     // 鼠标抬起事件
     handleMouseUp(e) {
 
-      if(this.isMarked){
+      if (this.isMarked) {
         return
       }
 
       if (this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt) {
         return
       }
-      
+
       setTimeout(() => {
         if (this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt) {
           this.hide();
         }
       }, 0);
 
-      const {commonAncestorContainer} = this.selectedText.getRangeAt(0);
-      if(commonAncestorContainer.nodeType !== 3 || commonAncestorContainer.parentNode.className === this.MAKRED_CLASSNAME){
+      const {
+        commonAncestorContainer
+      } = this.selectedText.getRangeAt(0);
+      if (commonAncestorContainer.nodeType !== 3 || commonAncestorContainer.parentNode.className === this.MAKRED_CLASSNAME) {
         return
       }
 
@@ -247,35 +226,18 @@
         anchorOffset,
         focusOffset
       } = this.selectedText;
-
       this.pageY = e.pageY;
-      let childIndex = 0;
-      for (let i = 0; i < this.selectedDom.childNodes.length; i++) {
-        if (this.selectedDom.childNodes[i] === this.selectedText.anchorNode) {
-          childIndex = i;
-        }
-      }
-      const domDeeps = setDomMap(this.selectedDom, []).reverse();
+
       const startIndex = Math.min(anchorOffset, focusOffset);
       const endIndex = Math.max(anchorOffset, focusOffset);
+      const className = commonAncestorContainer.parentNode.className.split(' ');
+      const parentClassName = className[className.length - 1];
       this.tempMarkerInfo = {
         id: setuuid(),
-        domDeeps,
-        childIndex,
+        parentClassName,
         startIndex,
         endIndex
       };
-
-      // 选择内容包含已标记处理
-      let hasMultipleElement = false;
-      this.selectedMarkers.forEach(item => {
-        if (JSON.stringify(item.domDeeps) === JSON.stringify(domDeeps)) {
-          if(startIndex < item.startIndex && endIndex > item.endIndex){
-            hasMultipleElement = true;
-          }
-        }
-      });
-      if(hasMultipleElement) return
       this.show();
 
     }
@@ -294,12 +256,57 @@
       e.stopPropagation();
       const text = this.selectedText.toString();
       const rang = this.selectedText.getRangeAt(0);
-      const span = setTextSelected(this.MAKRED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles, 1);
+      const span = setTextSelected(this.MAKRED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles);
       rang.surroundContents(span);
-      this.selectedMarkers.push(this.tempMarkerInfo);
+      const {
+        parentClassName,
+        id,
+        startIndex,
+        endIndex
+      } = this.tempMarkerInfo;
+      const newMark = {
+        id,
+        startIndex,
+        endIndex
+      };
+
+      if (!this.selectedMarkers[parentClassName]) {
+        this.selectedMarkers[parentClassName] = [newMark];
+      } else {
+        this.selectedMarkers[parentClassName].push(newMark);
+      }
+
+      const newMarkerArr = this.resetMarker(parentClassName);
+      this.selectedMarkers[parentClassName] = newMarkerArr;
       this.selectedText.removeAllRanges();
       this.hide();
       this.save();
+    }
+
+    resetMarker(parentClassName) {
+      const dom = document.getElementsByClassName(parentClassName)[0];
+      const newMarkerArr = [];
+      let childIndex = 0;
+      let preNodeLength = 0;
+      for (let i = 0; i < dom.childNodes.length; i++) {
+        const node = dom.childNodes[i];
+        if (node.nodeType !== 1 || node.className.indexOf(this.MAKRED_CLASSNAME) < 0) {
+          preNodeLength = node.textContent.length;
+        }
+        this.selectedMarkers[parentClassName].forEach(marker => {
+          if (dom.childNodes[i].id == marker.id) {
+            newMarkerArr.push({
+              id: marker.id,
+              startIndex: preNodeLength,
+              endIndex: preNodeLength + dom.childNodes[i].textContent.length,
+              childIndex: childIndex
+            });
+            childIndex += 2;
+          }
+
+        });
+      }
+      return newMarkerArr
     }
 
     save() {
@@ -316,77 +323,47 @@
 
     del() {
 
-      this.selectedMarkers.forEach((marker, index) => {
-       
-        if (marker.id.toString() === this.deleteId) {
-          const dom = document.getElementById(this.deleteId);
-          const parentNode = dom.parentNode;
-          const text = dom.innerText;
-          const replaceTextNode = document.createTextNode(text);
-          parentNode.replaceChild(replaceTextNode, dom);
+      const dom = document.getElementById(this.deleteId);
+      const parentNode = dom.parentNode;
+      const className = parentNode.className.split(' ');
+      const parentClassName = className[className.length - 1];
+      const text = dom.innerText;
+      const replaceTextNode = document.createTextNode(text);
+      parentNode.replaceChild(replaceTextNode, dom);
+      const preDom = replaceTextNode.previousSibling;
+      const nextDom = replaceTextNode.nextSibling;
 
-          // 当删除parentNode节点的前面的标记时, 修正后面标记相关参数
-          // 删除一个标记, 需要把前后的两个节点(如果为文本节点的话)合并为一个节点
-
-          const {
-            domDeeps,
-            childIndex,
-            endIndex
-          } = marker;
-          const preDom = replaceTextNode.previousSibling;
-          const nextDom = replaceTextNode.nextSibling;
-          if (preDom && preDom.nodeType === 3) {
-            preDom.textContent = preDom.textContent + text;
-            parentNode.removeChild(replaceTextNode);
-            if (nextDom && nextDom.nodeType === 3) {
-              preDom.textContent = preDom.textContent + nextDom.textContent;
-              parentNode.removeChild(nextDom);
-            }
-          } else {
-            if (nextDom && nextDom.nodeType === 3) {
-              replaceTextNode.textContent = replaceTextNode.textContent + nextDom.textContent;
-              parentNode.removeChild(nextDom);
-            }
-          }
-
-
-
-          this.selectedMarkers.forEach(item => {
-            const result = compareArr(domDeeps, item.domDeeps);
-            if(result === 'sameNode' && item.childIndex > childIndex){
-              item.childIndex = item.childIndex - 2;
-              item.startIndex = item.startIndex + endIndex;
-              item.endIndex = item.endIndex + endIndex;
-            }
-            const lastDomDeep = item.domDeeps[item.domDeeps.length - 1];
-            if(result === 'slibingNode' && lastDomDeep > childIndex){
-              item.domDeeps[item.domDeeps.length - 1] = lastDomDeep -2;
-            }
-          });
-
-          this.selectedMarkers.splice(index, 1);
-
-          this.save();
+      // 合并文本节点
+      if (preDom && preDom.nodeType === 3) {
+        preDom.textContent = preDom.textContent + text;
+        parentNode.removeChild(replaceTextNode);
+        if (nextDom && nextDom.nodeType === 3) {
+          preDom.textContent = preDom.textContent + nextDom.textContent;
+          parentNode.removeChild(nextDom);
         }
-      });
+      } else {
+        if (nextDom && nextDom.nodeType === 3) {
+          replaceTextNode.textContent = replaceTextNode.textContent + nextDom.textContent;
+          parentNode.removeChild(nextDom);
+        }
+      }
+      const newMarkerArr = this.resetMarker(parentClassName);
+      this.selectedMarkers[parentClassName] = newMarkerArr;
+      this.save();
     }
 
-    setDefaultMarkers(defaultMarkers) {
-      console.log(defaultMarkers);
-      this.selectedMarkers = defaultMarkers;
-      defaultMarkers.forEach(marker => {
-        const textNode = getDom(marker.domDeeps, marker.childIndex);
-        if (!textNode) return
-        const html = textNode.textContent;
-        const startHtml = html.substr(0, marker.startIndex);
-        const replaceHtml = html.substr(marker.startIndex, marker.endIndex - marker.startIndex);
-        const endHtml = html.substr(marker.endIndex);
-        textNode.textContent =
-          `${startHtml}${setTextSelected(this.MAKRED_CLASSNAME, replaceHtml, marker.id, this.markedStyles)}${endHtml}`;
-        const parentNode = textNode.parentNode;
-        let parentHtml = parentNode.innerHTML;
-        parentHtml = parentHtml.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
-        parentNode.innerHTML = parentHtml;
+    setDefaultMarkers() {
+      const defaultMarkers = this.selectedMarkers;
+      Object.keys(defaultMarkers).forEach(className => {
+        const dom = document.getElementsByClassName(className)[0];
+        defaultMarkers[className].forEach(marker => {
+          const currentNode = dom.childNodes[marker.childIndex];
+          currentNode.splitText(marker.startIndex);
+          const nextNode = currentNode.nextSibling;
+          nextNode.splitText(marker.endIndex - marker.startIndex);
+          const markedNode = setTextSelected(this.MAKRED_CLASSNAME, nextNode.textContent, marker.id, this.markedStyles);
+          dom.replaceChild(markedNode, nextNode);
+        });
       });
     }
   }

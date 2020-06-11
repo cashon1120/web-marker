@@ -10,19 +10,19 @@ import createBtnDom from './createBtnDom.js'
 
 /**
  * @class Marker
- * @param id: id
- * @param parentClassName: 父节点className, 对应 selectedText 
- * @param childIndex: 操作框样式
- * @param start: 标记后回调, 必填
- * @param end: 标记后回调, 必填
+ * @param id: id, setuuid() 生成, 一个简单的按当前时间生成的字符串, 不需要太专业
+ * @param parentClassName: 父节点className, 对应 selectedMarkers 中的 key,
+ * @param childIndex: 在父节点中的索引
+ * @param start: 标记开始位置
+ * @param end: 标记结束位置
  */
 class Marker {
-  constructor(id, parentClassName, childIndex, start, end){
+  constructor(id, parentClassName, childIndex, start, end) {
     this.id = id
     this.childIndex = childIndex
     this.start = start
     this.end = end
-    if(parentClassName){
+    if (parentClassName) {
       this.parentClassName = parentClassName
     }
   }
@@ -47,11 +47,11 @@ class WebTextMarker {
       throw new Error('onSave 必须为一个函数')
     }
 
-    if(options.markedStyles && Object.prototype.toString.call(options.markedStyles) === '[object Object]'){
+    if (options.markedStyles && Object.prototype.toString.call(options.markedStyles) === '[object Object]') {
       throw new Error('defaultMarkers 必须为一个对象')
     }
 
-    if(options.btnStyles && Object.prototype.toString.call(options.btnStyles) === '[object Object]'){
+    if (options.btnStyles && Object.prototype.toString.call(options.btnStyles) === '[object Object]') {
       throw new Error('btnStyles 必须为一个对象')
     }
 
@@ -67,7 +67,7 @@ class WebTextMarker {
     // 回调
     this.onSave = options.onSave
 
-    // 所有标记文本, 最后转换成json字符串保存到数据库
+    // 所有标记文本, 格式为: {parentClassName: [Marker, Marker, ...]}, 最后转换成json字符串保存到数据库
     this.selectedMarkers = {}
 
     // 当前操作dom, 目前只能是一个
@@ -94,14 +94,14 @@ class WebTextMarker {
     // 给每个节点加上特殊标识, 方便后面操作
     setMarkClassName(document.body)
 
-    // 当数据库有标记数据时, 设置标记状态
+    // 创建按钮节点
+    createBtnDom(this, options.btnStyles)
+
+    // 当默认数据时, 设置标记状态, defaultMarkers 格式 this.selectedMarkers 
     if (options.defaultMarkers && Object.keys(options.defaultMarkers).length > 0) {
       this.selectedMarkers = options.defaultMarkers
       this.setDefaultMarkers()
     }
-
-    // 创建按钮节点
-    createBtnDom(this, options.btnStyles)
 
     // 监听事件
     document.addEventListener('selectionchange', this.handleSelectionChange.bind(this))
@@ -236,7 +236,7 @@ class WebTextMarker {
       }
       this.selectedMarkers[parentClassName].forEach(marker => {
         if (dom.childNodes[i].id == marker.id) {
-          newMarkerArr.push(new Marker(marker.id, '', childIndex, preNodeLength, preNodeLength + dom.childNodes[i].textContent.length,))
+          newMarkerArr.push(new Marker(marker.id, '', childIndex, preNodeLength, preNodeLength + dom.childNodes[i].textContent.length, ))
           childIndex += 2
         }
 

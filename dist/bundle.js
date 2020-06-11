@@ -184,6 +184,8 @@
         this.setDefaultMarkers();
       }
 
+
+
       // 监听事件
       document.addEventListener('selectionchange', this.handleSelectionChange.bind(this));
       document.addEventListener(this.userAgent.eventName.mousedown, this.handleMouseDown.bind(this));

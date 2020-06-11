@@ -27,8 +27,15 @@
 <script src="../dist/bundle.js"></script>
 <script>
   window.addEventListener('load', () => {
+
+    // 测试代码
+    const btn_clearData = document.getElementById('btn_clearData')
+    btn_clearData.addEventListener('click', () => {
+      localStorage.removeItem('markers')
+    })
+
     const defaultMarkers = JSON.parse(localStorage.getItem('markers'))
-//  localStorage.removeItem('markers')
+    // localStorage.removeItem('markers')
     const myTextMarker = new window.WebTextMarker({
       defaultMarkers,
       onSave: (markersJson) => {
@@ -36,11 +43,7 @@
       }
     })
     
-    // 测试代码
-    const btn_clearData = document.getElementById('btn_clearData')
-    btn_clearData.addEventListener('click', () => {
-      localStorage.removeItem('markers')
-    })
+
   })
 </script>
 

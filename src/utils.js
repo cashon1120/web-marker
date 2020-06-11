@@ -11,9 +11,11 @@ export const setTextSelected = (className, text, id, styles) => {
   span.className = className
   span.id = id
   span.innerHTML = text
-  Object.keys(styles).forEach(key => {
-    span.style[key] = styles[key]
-  })
+  if (styles) {
+    Object.keys(styles).forEach(key => {
+      span.style[key] = styles[key]
+    })
+  }
   return span
 }
 
@@ -38,13 +40,39 @@ export const setMarkClassName = (dom, index = 1) => {
     for (let i = 0; i < dom.childNodes.length; i++) {
       const childNode = dom.childNodes[i]
       if (childNode.nodeType === 1) {
-        const ingoreNodes = ['BR', 'HR']
-        if(ingoreNodes.includes(childNode.nodeName)) return
-        childNode.className = childNode.className ? childNode.className + ` _WM-${index}-${i}` : `_WM-${index}-${i}`
+        const ingoreNodes = ['BR', 'HR', 'SCRIPT', 'BUTTON']
+        if (!ingoreNodes.includes(childNode.nodeName)) {
+          childNode.className = childNode.className ? childNode.className + ` _WM-${index}-${i}` : `_WM-${index}-${i}`
+        }
         if (childNode.childNodes.length > 0) {
           setMarkClassName(childNode, index + 1 + `-${i}`)
         }
       }
+    }
+  }
+}
+
+export const mergeTextNode = dom => {
+  const parentNode = dom.parentNode
+  if(!parentNode) return
+  const text = dom.innerText
+  const replaceTextNode = document.createTextNode(text)
+  parentNode.replaceChild(replaceTextNode, dom)
+  const preDom = replaceTextNode.previousSibling
+  const nextDom = replaceTextNode.nextSibling
+
+  // 合并文本节点
+  if (preDom && preDom.nodeType === 3) {
+    preDom.textContent = preDom.textContent + text
+    parentNode.removeChild(replaceTextNode)
+    if (nextDom && nextDom.nodeType === 3) {
+      preDom.textContent = preDom.textContent + nextDom.textContent
+      parentNode.removeChild(nextDom)
+    }
+  } else {
+    if (nextDom && nextDom.nodeType === 3) {
+      replaceTextNode.textContent = replaceTextNode.textContent + nextDom.textContent
+      parentNode.removeChild(nextDom)
     }
   }
 }

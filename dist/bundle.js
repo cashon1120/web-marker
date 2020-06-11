@@ -16,9 +16,11 @@
     span.className = className;
     span.id = id;
     span.innerHTML = text;
-    Object.keys(styles).forEach(key => {
-      span.style[key] = styles[key];
-    });
+    if (styles) {
+      Object.keys(styles).forEach(key => {
+        span.style[key] = styles[key];
+      });
+    }
     return span
   };
 
@@ -43,9 +45,10 @@
       for (let i = 0; i < dom.childNodes.length; i++) {
         const childNode = dom.childNodes[i];
         if (childNode.nodeType === 1) {
-          const ingoreNodes = ['BR', 'HR'];
-          if(ingoreNodes.includes(childNode.nodeName)) return
-          childNode.className = childNode.className ? childNode.className + ` _WM-${index}-${i}` : `_WM-${index}-${i}`;
+          const ingoreNodes = ['BR', 'HR', 'SCRIPT', 'BUTTON'];
+          if (!ingoreNodes.includes(childNode.nodeName)) {
+            childNode.className = childNode.className ? childNode.className + ` _WM-${index}-${i}` : `_WM-${index}-${i}`;
+          }
           if (childNode.childNodes.length > 0) {
             setMarkClassName(childNode, index + 1 + `-${i}`);
           }
@@ -54,18 +57,44 @@
     }
   };
 
+  const mergeTextNode = dom => {
+    const parentNode = dom.parentNode;
+    if(!parentNode) return
+    const text = dom.innerText;
+    const replaceTextNode = document.createTextNode(text);
+    parentNode.replaceChild(replaceTextNode, dom);
+    const preDom = replaceTextNode.previousSibling;
+    const nextDom = replaceTextNode.nextSibling;
+
+    // 合并文本节点
+    if (preDom && preDom.nodeType === 3) {
+      preDom.textContent = preDom.textContent + text;
+      parentNode.removeChild(replaceTextNode);
+      if (nextDom && nextDom.nodeType === 3) {
+        preDom.textContent = preDom.textContent + nextDom.textContent;
+        parentNode.removeChild(nextDom);
+      }
+    } else {
+      if (nextDom && nextDom.nodeType === 3) {
+        replaceTextNode.textContent = replaceTextNode.textContent + nextDom.textContent;
+        parentNode.removeChild(nextDom);
+      }
+    }
+  };
+
   const createBtnDom = (textMarker, styles) => {
       const defaultStyles = {
         position: 'absolute',
         textAlign: 'center',
-        width: '80%',
-        left: '10%',
+        width: '98%',
+        left: '1%',
         height: '35px',
         lineHeight: '35px',
         backgroundColor: 'black',
         borderRadius: 3,
         display: 'none',
         color: '#fff',
+        transition: 'all .3s',
         ...styles
       };
       const btnBox = document.createElement('div');
@@ -79,8 +108,25 @@
       <div style="flex: 1" id="webMarker_btn_mark">标记</div>
       <div style="flex: 1" id="webMarker_btn_delete">删除标记</div>
       <div style="flex: 1" id="webMarker_btn_cancel">取消</div>
+      <div id="webMarker_arrow"></div>
     `;
+
+
       document.body.appendChild(btnBox);
+
+
+      const arrow = document.getElementById('webMarker_arrow');
+      arrow.style.position = 'absolute';
+      arrow.style.width = '10px';
+      arrow.style.height = '10px';
+      arrow.style.backgroundColor = defaultStyles.backgroundColor;
+      arrow.style.left = '50%';
+      arrow.style.marginLeft = '-5px';
+      arrow.style.bottom = '-5px';
+      arrow.style.transform = 'rotate(45deg)';
+      arrow.style.transition = 'all .3s';
+
+      textMarker.arrow = arrow;
       textMarker.btn_Box = document.getElementById('webMarkerBtnBox');
       textMarker.btn_mark = document.getElementById('webMarker_btn_mark');
       textMarker.btn_cancel = document.getElementById('webMarker_btn_cancel');
@@ -139,7 +185,8 @@
         throw new Error('btnStyles 必须为一个对象')
       }
 
-      this.MAKRED_CLASSNAME = 'web_text_marker';
+      this.MAKRED_CLASSNAME = 'web_marker';
+      this.TEMP_MARKED_CLASSNAME = 'temp_marker';
 
       // 标记样式
       this.markedStyles = {
@@ -154,14 +201,11 @@
       // 所有标记文本, 格式为: {parentClassName: [Marker, Marker, ...]}, 最后转换成json字符串保存到数据库
       this.selectedMarkers = {};
 
-      // 当前操作dom, 目前只能是一个
-      this.selectedDom = null;
-
       // 选中文本对象, 从 window.getSelection() 中拿
       this.selectedText = {};
 
-      // 操作框显示位置
-      this.pageY = 0;
+      // 临时标记节点
+      this.tempMarkDom = null;
 
       // 临时保存标记信息, 鼠标抬起时设置, 解决点击"标记"按钮时 window.getSelection 影响 this.selectedText 的问题
       this.tempMarkerInfo = {};
@@ -199,6 +243,10 @@
     handleSelectionChange() {
       if (window.getSelection()) {
         this.selectedText = window.getSelection();
+        if(this.tempMarkDom && this.tempMarkDom.className === 'web_marker') return
+        if (this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt) {
+          this.hide();
+        }
       } else {
         return
       }
@@ -213,8 +261,9 @@
         setDomDisplay(this.btn_mark, 'none');
         setDomDisplay(this.btn_delete, 'block');
         this.deleteId = e.target.id;
-        this.show();
         this.isMarked = true;
+        this.tempMarkDom = target;
+        this.show();
         return
       }
       this.isMarked = false;
@@ -222,7 +271,6 @@
 
     // 鼠标抬起事件
     handleMouseUp(e) {
-
       if (this.isMarked) {
         return
       }
@@ -240,11 +288,11 @@
       const {
         commonAncestorContainer
       } = this.selectedText.getRangeAt(0);
+
       if (commonAncestorContainer.nodeType !== 3 || commonAncestorContainer.parentNode.className === this.MAKRED_CLASSNAME) {
         return
       }
-
-      this.selectedDom = commonAncestorContainer.parentNode;
+      
       // 遇到以下节点时不处理, 可按需要添加
       const disabledElement = ['BUTTON', 'H1', 'H2', 'IMG'];
       if (disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
@@ -263,28 +311,39 @@
       const startIndex = Math.min(anchorOffset, focusOffset);
       const endIndex = Math.max(anchorOffset, focusOffset);
       const className = commonAncestorContainer.parentNode.className.split(' ');
-      const parentClassName = className[className.length - 1];
+      let parentClassName = className[className.length - 1];
       this.tempMarkerInfo = new Marker(setuuid(), parentClassName, 0, startIndex, endIndex);
-      this.show();
 
+
+      const text = this.selectedText.toString();
+      const rang = this.selectedText.getRangeAt(0);
+      const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id);
+      rang.surroundContents(span);
+
+      this.tempMarkDom =  document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0];
+      this.show();
     }
 
     hide() {
       setDomDisplay(this.btn_Box, 'none');
+      if(!this.tempMarkDom) return
+      mergeTextNode(this.tempMarkDom);
     }
 
     show() {
       setDomDisplay(this.btn_Box, 'flex');
-      this.btn_Box.style.top = this.pageY + 20 + 'px';
+      const position = this.tempMarkDom.getBoundingClientRect();
+      this.btn_Box.style.top = position.top + window.scrollY - 50 + 'px';
+      this.arrow.style.left = position.left + this.tempMarkDom.offsetWidth / 2 - 5 + 'px';
     }
 
     mark(e) {
       e.preventDefault();
       e.stopPropagation();
-      const text = this.selectedText.toString();
-      const rang = this.selectedText.getRangeAt(0);
-      const span = setTextSelected(this.MAKRED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles);
-      rang.surroundContents(span);
+      this.tempMarkDom.className = this.MAKRED_CLASSNAME;
+      Object.keys(this.markedStyles).forEach(key => {
+        this.tempMarkDom.style[key] = this.markedStyles[key];
+      });
       const {parentClassName} = this.tempMarkerInfo;
       if (!this.selectedMarkers[parentClassName]) {
         this.selectedMarkers[parentClassName] = [this.tempMarkerInfo];
@@ -294,8 +353,9 @@
       const newMarkerArr = this.resetMarker(parentClassName);
       this.selectedMarkers[parentClassName] = newMarkerArr;
       this.selectedText.removeAllRanges();
-      this.hide();
+      this.tempMarkDom = null;
       this.save();
+
     }
 
     resetMarker(parentClassName) {
@@ -332,31 +392,11 @@
     }
 
     del() {
-
+      this.tempMarkDom = null;
       const dom = document.getElementById(this.deleteId);
-      const parentNode = dom.parentNode;
-      const className = parentNode.className.split(' ');
+      const className = dom.parentNode.className.split(' ');
       const parentClassName = className[className.length - 1];
-      const text = dom.innerText;
-      const replaceTextNode = document.createTextNode(text);
-      parentNode.replaceChild(replaceTextNode, dom);
-      const preDom = replaceTextNode.previousSibling;
-      const nextDom = replaceTextNode.nextSibling;
-
-      // 合并文本节点
-      if (preDom && preDom.nodeType === 3) {
-        preDom.textContent = preDom.textContent + text;
-        parentNode.removeChild(replaceTextNode);
-        if (nextDom && nextDom.nodeType === 3) {
-          preDom.textContent = preDom.textContent + nextDom.textContent;
-          parentNode.removeChild(nextDom);
-        }
-      } else {
-        if (nextDom && nextDom.nodeType === 3) {
-          replaceTextNode.textContent = replaceTextNode.textContent + nextDom.textContent;
-          parentNode.removeChild(nextDom);
-        }
-      }
+      mergeTextNode(dom);
       const newMarkerArr = this.resetMarker(parentClassName);
       this.selectedMarkers[parentClassName] = newMarkerArr;
       this.save();

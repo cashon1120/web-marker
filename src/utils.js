@@ -24,7 +24,7 @@ export const getUserAgent = () => {
   const isAndroid = u.indexOf('Android') > -1 || u.indexOf('Adr') > -1
   const isiOS = !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/)
   const isPC = (isAndroid || isiOS) ? false : true
-
+  const isSafari = /Safari/.test(u) && !/Chrome/.test(u);
   const eventName = {
     mousedown: isPC ? 'mousedown' : 'touchstart',
     mouseup: isPC ? 'mouseup' : 'touchend',
@@ -34,6 +34,7 @@ export const getUserAgent = () => {
     isAndroid,
     isiOS,
     isPC,
+    isSafari,
     eventName
   }
 }

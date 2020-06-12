@@ -2,11 +2,15 @@
 <html lang="en">
 
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>web-marker</title>
 	<style>
-		#info{
+		body {
+			padding-bottom: 100px;
+		}
+
+		#info {
 			position: fixed;
 			width: 100%;
 			bottom: 0;
@@ -16,71 +20,71 @@
 			font-size: 12px;
 			border-top: 1px solid #eee;
 		}
-		#selectionText{
+
+		#selectionText {
 			white-space: nowrap;
 			overflow: hidden;
 			text-overflow: ellipsis;
+		}
+
+		.test {
+			margin-bottom: 30px;
 		}
 	</style>
 </head>
 
 <body>
-  <h1>这里是标题</h1>
-  <div class="test">导致疫情二次暴发。美国国会预算办公室1日发布的数据显示，即使所有救助资金都得以用来缓解新冠疫情影响,<br/><br/><br/>疫情未疫情未疫情未疫情未疫情未
-    <p>
+	<h1>这里是标题</h1>
+	<div class="test">导致疫情二次暴发。美国国会预算办公室1日发布的数据显示，即使所有救助资金都得以用来缓解新冠疫情影响,<br /><br /><br />疫情未疫情未疫情未疫情未疫情未
+		<p>
 			9万亿美元。意大利累计确诊233515例大型示威活动引发对疫情复燃的担忧根据意大利民事保护部门公布的数据，截至当地时间6月2日18时，意大利新增新冠肺炎确诊病例318例，累计确诊233515例，新增死亡病例55例，累计死亡33530例
 			9万亿美元。意大利累计确诊233515例大型示威活动引发对疫情复燃的担忧根据意大利民事保护部门公布的数据，截至当地时间6月2日18时，意大利新增新冠肺炎确诊病例318例，累计确诊233515例，新增死亡病例55例，累计死亡33530例
 			9万亿美元。意大利累计确诊233515例大型示威活动引发对疫情复燃的担忧根据意大利民事保护部门公布的数据，截至当地时间6月2日18时，意大利新增新冠肺炎确诊病例318例，累计确诊233515例，新增死亡病例55例，累计死亡33530例
 			9万亿美元。意大利累计确诊233515例大型示威活动引发对疫情复燃的担忧根据意大利民事保护部门公布的数据，截至当地时间6月2日18时，意大利新增新冠肺炎确诊病例318例，累计确诊233515例，新增死亡病例55例，累计死亡33530例
 			9万亿美元。意大利累计确诊233515例大型示威活动引发对疫情复燃的担忧根据意大利民事保护部门公布的数据，截至当地时间6月2日18时，意大利新增新冠肺炎确诊病例318例，累计确诊233515例，新增死亡病例55例，累计死亡33530例
 			9万亿美元。意大利累计确诊233515例大型示威活动引发对疫情复燃的担忧根据意大利民事保护部门公布的数据，截至当地时间6月2日18时，意大利新增新冠肺炎确诊病例318例，累计确诊233515例，新增死亡病例55例，累计死亡33530例
-			
-      <span>123123213</span>
-    </p>
-  </div>
-    <div>
-      <div>5555555</div>
-      <div>99999999999</div>
-  </div>
-
-  <h2>实例</h2>
-  <p>下面的代码片段使用 <a href="dom-loadxmldoc.html">loadXMLDoc()</a> 把 "<a target="_blank"
-      href="/try/demo_source/books.xml">books.xml</a>" 载入 xmlDoc 中，并在第一个单词之后分割文本节点：</p>
-  <div class="example">
-    <h2 class="example">实例</h2>
-    <div class="example_code notranslate">
-      xmlDoc=loadXMLDoc("books.xml");<br /><br />
-      x=xmlDoc.getElementsByTagName("title")[0].childNodes[0];<br />
-      y=x.splitText(9);<br />
-      document.write(x.nodeValue);
-      document.write("<br>");
-      document.write(y.nodeValue);
-    </div>
+		</p>
 	</div>
-  <button id="btn_clearData" class="test">清除数据(刷新生效)</button>
+	<div class="test">
+		<div>5555555</div>
+		<div>99999999999</div>
+	</div>
+
+	<span class="header-text">Put this in a headline</span>
+	<button id="btn_clearData" class="test">清除所有数据</button>
 </body>
 <script src="./bundle.js"></script>
 <script>
-  window.addEventListener('load', () => {
 
-    // 测试代码
-    const btn_clearData = document.getElementById('btn_clearData')
-    btn_clearData.addEventListener('click', () => {
-      localStorage.removeItem('markers')
-    })
+const range = document.createRange();
+const newParent = document.createElement('h1');
+console.log(range)
+range.selectNode(document.querySelector('.header-text'));
+console.log(range)
+range.surroundContents(newParent);
+console.log(range)
 
-    const defaultMarkers = JSON.parse(localStorage.getItem('markers'))
-    // localStorage.removeItem('markers')
-    const myTextMarker = new window.WebTextMarker({
-      defaultMarkers,
-      onSave: (markersJson) => {
-				console.log(123123)
-        localStorage.setItem('markers', markersJson)
-			},
-			debug: true
-    })
 
-  })
+	window.addEventListener('load', () => {
+
+		// 测试代码
+		const btn_clearData = document.getElementById('btn_clearData')
+		btn_clearData.addEventListener('click', () => {
+			localStorage.removeItem('markers')
+			location.reload()
+		})
+
+		const defaultMarkers = JSON.parse(localStorage.getItem('markers'))
+		// localStorage.removeItem('markers')
+		const myTextMarker = new window.WebTextMarker({
+			defaultMarkers,
+			debug: true,
+			onSave: (markersJson) => {
+				localStorage.setItem('markers', markersJson)
+			}
+		})
+
+	})
 </script>
 
 </html>

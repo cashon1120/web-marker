@@ -24,7 +24,7 @@ const createBtnDom = (textMarker, styles) => {
     setDomStyles(btnBox, defaultStyles)
 
     btnBox.style.backgroundColor = 'transparent'
-    const divStyle = `flex: 1; background-color: ${defaultStyles.backgroundColor}; border-right: 1px solid rgba(255,255,255,.3)` 
+    const divStyle = `flex: 1; background-color: ${defaultStyles.backgroundColor}; border-right: 1px solid rgba(255,255,255,.3); box-sizing: border-box;` 
     btnBox.innerHTML = `
       <div style="${divStyle}" id="webMarker_btn_mark">标记</div>
       <div style="${divStyle}" id="webMarker_btn_delete">删除选中标记</div>

@@ -20,7 +20,7 @@ const createDebugDom = textMarker => {
     debugDom.innerHTML = `
       <div id="debug_userAgaent"></div>
       <div id="debug_selectionText">选中文本:</div>
-      <div id="debug_event">选中文本:</div>
+      <div id="debug_event">事件:</div>
     `
 
     document.body.appendChild(debugDom)

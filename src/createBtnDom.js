@@ -1,4 +1,4 @@
-import {getUserAgent} from './utils'
+import {getUserAgent, setDomStyles} from './utils'
 
 const createBtnDom = (textMarker, styles) => {
     const defaultStyles = {
@@ -21,14 +21,13 @@ const createBtnDom = (textMarker, styles) => {
     const btnBox = document.createElement('div')
 
     btnBox.id = 'webMarkerBtnBox'
-    Object.keys(defaultStyles).forEach(key => {
-      btnBox.style[key] = defaultStyles[key]
-    })
+    setDomStyles(btnBox, defaultStyles)
+
     btnBox.style.backgroundColor = 'transparent'
     const divStyle = `flex: 1; background-color: ${defaultStyles.backgroundColor}; border-right: 1px solid rgba(255,255,255,.3)` 
     btnBox.innerHTML = `
       <div style="${divStyle}" id="webMarker_btn_mark">标记</div>
-      <div style="${divStyle}" id="webMarker_btn_delete">删除标记</div>
+      <div style="${divStyle}" id="webMarker_btn_delete">删除选中标记</div>
       <div style="${divStyle}; border-right: 0" id="webMarker_btn_cancel">取消</div>
       <div id="webMarker_arrow"></div>
     `

@@ -1,3 +1,5 @@
+import {setDomStyles} from './utils'
+
 const createDebugDom = textMarker => {
     const styles = {
       position: 'fixed',
@@ -14,9 +16,7 @@ const createDebugDom = textMarker => {
     const debugDom = document.createElement('div')
 
     debugDom.id = 'webMarkerDebugBox'
-    Object.keys(styles).forEach(key => {
-      debugDom.style[key] = styles[key]
-    })
+    setDomStyles(debugDom, styles)
     debugDom.innerHTML = `
       <div id="debug_userAgaent"></div>
       <div id="debug_selectionText">选中文本:</div>

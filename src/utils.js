@@ -23,14 +23,17 @@ export const getUserAgent = () => {
   const u = navigator.userAgent
   const isAndroid = u.indexOf('Android') > -1 || u.indexOf('Adr') > -1
   const isiOS = !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/)
+  const isPC = (isAndroid || isiOS) ? false : true
+
   const eventName = {
-    mousedown: isAndroid || isiOS ? 'touchstart' : 'mousedown',
-    mouseup: isAndroid || isiOS ? 'touchend' : 'mouseup',
-    mousemove: isAndroid || isiOS ? 'touchmove' : 'mousemove',
+    mousedown: isPC ? 'mousedown' : 'touchstart',
+    mouseup: isPC ? 'mouseup' : 'touchend',
+    mousemove: isPC ? 'mousemove': 'touchmove'
   }
   return {
     isAndroid,
     isiOS,
+    isPC,
     eventName
   }
 }
@@ -75,4 +78,10 @@ export const mergeTextNode = dom => {
       parentNode.removeChild(nextDom)
     }
   }
+}
+
+export const setDomStyles = (dom, styles) => {
+  Object.keys(styles).forEach(key => {
+    dom.style[key] = styles[key]
+  })
 }

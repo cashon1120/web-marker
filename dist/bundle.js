@@ -28,14 +28,17 @@
     const u = navigator.userAgent;
     const isAndroid = u.indexOf('Android') > -1 || u.indexOf('Adr') > -1;
     const isiOS = !!u.match(/\(i[^;]+;( U;)? CPU.+Mac OS X/);
+    const isPC = (isAndroid || isiOS) ? false : true;
+
     const eventName = {
-      mousedown: isAndroid || isiOS ? 'touchstart' : 'mousedown',
-      mouseup: isAndroid || isiOS ? 'touchend' : 'mouseup',
-      mousemove: isAndroid || isiOS ? 'touchmove' : 'mousemove',
+      mousedown: isPC ? 'mousedown' : 'touchstart',
+      mouseup: isPC ? 'mouseup' : 'touchend',
+      mousemove: isPC ? 'mousemove': 'touchmove'
     };
     return {
       isAndroid,
       isiOS,
+      isPC,
       eventName
     }
   };
@@ -82,6 +85,12 @@
     }
   };
 
+  const setDomStyles = (dom, styles) => {
+    Object.keys(styles).forEach(key => {
+      dom.style[key] = styles[key];
+    });
+  };
+
   const createBtnDom = (textMarker, styles) => {
       const defaultStyles = {
         position: 'absolute',
@@ -103,14 +112,13 @@
       const btnBox = document.createElement('div');
 
       btnBox.id = 'webMarkerBtnBox';
-      Object.keys(defaultStyles).forEach(key => {
-        btnBox.style[key] = defaultStyles[key];
-      });
+      setDomStyles(btnBox, defaultStyles);
+
       btnBox.style.backgroundColor = 'transparent';
       const divStyle = `flex: 1; background-color: ${defaultStyles.backgroundColor}; border-right: 1px solid rgba(255,255,255,.3)`; 
       btnBox.innerHTML = `
       <div style="${divStyle}" id="webMarker_btn_mark">标记</div>
-      <div style="${divStyle}" id="webMarker_btn_delete">删除标记</div>
+      <div style="${divStyle}" id="webMarker_btn_delete">删除选中标记</div>
       <div style="${divStyle}; border-right: 0" id="webMarker_btn_cancel">取消</div>
       <div id="webMarker_arrow"></div>
     `;
@@ -156,9 +164,7 @@
       const debugDom = document.createElement('div');
 
       debugDom.id = 'webMarkerDebugBox';
-      Object.keys(styles).forEach(key => {
-        debugDom.style[key] = styles[key];
-      });
+      setDomStyles(debugDom, styles);
       debugDom.innerHTML = `
       <div id="debug_userAgaent"></div>
       <div id="debug_selectionText">选中文本:</div>
@@ -198,6 +204,7 @@
    * @param options.defaultMarkers: 初始标记数据
    * @param options.markedStyles: 标记文本样式
    * @param options.btnStyles: 操作框样式
+   * @param options.focusMarkedStyles: 选中已标记文本样式
    * @param options.onSave: 标记后回调, 必填
    */
 
@@ -213,26 +220,35 @@
       }
 
       if (options.markedStyles && Object.prototype.toString.call(options.markedStyles) === '[object Object]') {
-        throw new Error('defaultMarkers 必须为一个对象')
+        throw new Error('标记样式 markedStyles 必须为一个对象')
       }
 
       if (options.btnStyles && Object.prototype.toString.call(options.btnStyles) === '[object Object]') {
-        throw new Error('btnStyles 必须为一个对象')
+        throw new Error('按钮样式 btnStyles 必须为一个对象')
       }
 
-      this.MAKRED_CLASSNAME = 'web_marker';
-      this.TEMP_MARKED_CLASSNAME = 'temp_marker';
+      if (options.focusMarkedStyles && Object.prototype.toString.call(options.focusMarkedStyles) === '[object Object]') {
+        throw new Error('标记高亮样式 focusMarkedStyles 必须为一个对象')
+      }
 
 
+      this.MARKED_CLASSNAME = '_web_marker';
+      this.TEMP_MARKED_CLASSNAME = '_temp_marker';
+      this.FOUCE_MARKED_CLASSNAME = '_focus_web_marker';
 
-      // 标记样式
+
       this.markedStyles = {
         color: '#fff',
         backgroundColor: 'cadetblue',
         ...options.markedStyles
       };
 
-      // 回调
+      this.focusMarkedStyles = {
+        color: '#fff',
+        backgroundColor: '#ffb400',
+        ...options.focusMarkedStyles
+      };
+
       this.options = options || {};
 
       // 所有标记文本, 格式为: {parentClassName: [Marker, Marker, ...]}, 最后转换成json字符串保存到数据库
@@ -241,7 +257,7 @@
       // 选中文本对象, 从 window.getSelection() 中拿
       this.selectedText = {};
 
-      // 临时标记节点
+      // 临时标记节点, 主要是 PC 端用
       this.tempMarkDom = null;
 
       // 临时保存标记信息, 鼠标抬起时设置, 解决点击"标记"按钮时 window.getSelection 影响 this.selectedText 的问题
@@ -253,11 +269,11 @@
       // 是否已标记
       this.isMarked = false;
 
+      // 弹框顶部位置
       this.pageY = 0;
 
+      // 移动端获取点击坐标, touchs[0]
       this.touch = null;
-
-      this.isPc = true;
 
       this.init();
     }
@@ -271,9 +287,6 @@
 
       // 获取浏览器环境
       this.userAgent = getUserAgent();
-      if (this.userAgent.isAndroid || this.userAgent.isiOS) {
-        this.isPc = false;
-      }
 
       // 给每个节点加上特殊标识, 方便后面操作
       setMarkClassName(document.body);
@@ -284,7 +297,10 @@
       // 创建调试节点
       if (debug) {
         createDebugDom(this);
-        this.debug_userAgaent.innerHTML = `安卓: ${this.userAgent.isAndroid};&nbsp;&nbsp;&nbsp;iOS: ${this.userAgent.isiOS};`;
+        this.debug_userAgaent.innerHTML = `
+        android: ${this.userAgent.isAndroid};&nbsp;&nbsp;&nbsp;
+        iOS: ${this.userAgent.isiOS};&nbsp;&nbsp;&nbsp;
+        pc: ${this.userAgent.isPC}`;
       }
 
       // 当默认数据时, 设置标记状态, defaultMarkers 格式 this.selectedMarkers 
@@ -293,35 +309,37 @@
         this.setDefaultMarkers();
       }
 
-
       // 监听事件{}
       document.addEventListener('selectionchange', this.handleSelectionChange.bind(this));
       document.addEventListener(this.userAgent.eventName.mousedown, this.handleMouseDown.bind(this));
-      if (this.isPc) {
+
+      // 移动端在选择文本的时候无法监听移动事件, 所以分开处理, 移动端口直接在 selectionchange 事件中控制流程
+      // PC 端的优势在选中文本后先添加一个临时节点, 方便定位, 鼠标抬起后再执行后续, 移动端暂不能做到
+      if (this.userAgent.isPC) {
         document.addEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp.bind(this));
-      } else {
-        document.addEventListener(this.userAgent.eventName.mousemove, this.handleMouseMove.bind(this));
       }
     }
 
     // 选中文本事件
     handleSelectionChange() {
-
       if (window.getSelection()) {
         this.selectedText = window.getSelection();
-        if (this.isPc) {
-          if (this.tempMarkDom && this.tempMarkDom.className === this.MAKRED_CLASSNAME) return
-          if (this.checkSelectionTextLength()) {
-            this.hide();
-          }
+        // 没有选中文本时隐藏弹框
+        if (this.checkNoSelectionText() && !this.isMarked) {
+          this.hide();
+          return
+        }
+
+        if (this.userAgent.isPC) {
+          // 当前选中的是已标记节点不执行任何操作
+          if (this.tempMarkDom && this.tempMarkDom.className.indexOf(this.MARKED_CLASSNAME) > -1) return
           return
         }
 
         /*** 下面是移动端的处理 ***/
 
-        // 没有选中文本时隐藏弹框
-        if (this.checkSelectionTextLength() && !this.isMarked) {
-          this.hide();
+        // 选中的是已标记文本
+        if (this.isMarked) {
           return
         }
 
@@ -340,7 +358,7 @@
           return
         }
 
-        if (this.selectedText.toString().length > 0 && !this.isPc) {
+        if (this.selectedText.toString().length > 0 && !this.userAgent.isPC) {
           this.handleMouseUp();
         }
 
@@ -359,7 +377,7 @@
     // 鼠标按下
     handleMouseDown(e) {
       // e.preventDefault()
-      if (!this.isPc) {
+      if (!this.userAgent.isPC) {
         this.touch = e.touches[0];
       } else {
         this.pageY = e.pageY;
@@ -369,48 +387,37 @@
         this.debug_event.innerHTML = `当前坐标: ${this.pageY}, 点击目标: ${e.target.className}`;
       }
       // 当选中的文本已经标记时的处理, 隐藏 "标记" 按钮, 显示 "删除" 按钮
-      if (target.className === this.MAKRED_CLASSNAME) {
+      if (target.className.indexOf(this.MARKED_CLASSNAME) > -1) {
+        this.removeFocusStyle();
+        target.className = `${this.MARKED_CLASSNAME} ${this.FOUCE_MARKED_CLASSNAME}`;
+        setDomStyles(target, this.focusMarkedStyles);
         setDomDisplay(this.btn_mark, 'none');
         setDomDisplay(this.btn_delete, 'block');
         this.deleteId = e.target.id;
+
         this.isMarked = true;
-        if (this.isPc) {
-          this.tempMarkDom = target;
-        }
+
+        this.tempMarkDom = target;
+
         setTimeout(() => {
           this.show();
-        }, 10);
-
+        }, 0);
         return
       }
       this.isMarked = false;
     }
 
-    handleMouseMove(e) {
-      // e.preventDefault()
-      if (this.userAgent.isAndroid || this.userAgent.isiOS) {
-        this.touch = e.touches[0];
-        this.pageY = this.touch.pageY;
-      } else {
-        this.pageY = e.pageY;
-      }
-
-    }
-
     // 鼠标抬起事件
     handleMouseUp() {
 
-      // console.log(this.selectedText)
-      // console.log(this.selectedText.getRangeAt(0))
+      if (this.userAgent.isPC) {
 
-      if (this.isPc) {
-
-        if (this.checkSelectionTextLength()) {
+        if (this.checkNoSelectionText()) {
           return
         }
 
         setTimeout(() => {
-          if (this.checkSelectionTextLength() && !this.isMarked) {
+          if (this.checkNoSelectionText() && !this.isMarked) {
             this.hide();
           }
         }, 0);
@@ -443,7 +450,7 @@
       const className = commonAncestorContainer.parentNode.className.split(' ');
       let parentClassName = className[className.length - 1];
       this.tempMarkerInfo = new Marker(setuuid(), parentClassName, 0, startIndex, endIndex);
-      if (this.isPc) {
+      if (this.userAgent.isPC) {
 
         const text = this.selectedText.toString();
         const rang = this.selectedText.getRangeAt(0);
@@ -458,31 +465,44 @@
       }
 
 
-      if (this.options.debug) {
-        this.debug_event.innerHTML = '当前事件: 正在选择';
-      }
+      if (this.options.debug) ;
     }
 
     hide() {
       setDomDisplay(this.btn_Box, 'none');
-      if (this.isPc) {
-        if (!this.tempMarkDom || this.tempMarkDom.className === this.MAKRED_CLASSNAME) return
+      this.removeFocusStyle();
+      if (this.userAgent.isPC) {
+        if (!this.tempMarkDom || this.tempMarkDom.className.indexOf(this.MARKED_CLASSNAME) > -1) return
         mergeTextNode(this.tempMarkDom);
+      } else {
+        this.tempMarkDom = null;
       }
+
+
     }
 
     show() {
       setDomDisplay(this.btn_Box, 'flex');
-      if (this.isPc) {
-        const domAttr = this.tempMarkDom.getBoundingClientRect();
-        this.btn_Box.style.top = domAttr.top + window.scrollY - 50 + 'px';
-        let left = domAttr.left + this.tempMarkDom.offsetWidth / 2 - 5;
-        if (domAttr.width + domAttr.left > window.innerWidth) {
-          left = domAttr.left;
+      let tempDomAttr = null;
+      let left = '50%';
+      let top = 'auto';
+      if (this.tempMarkDom) {
+        tempDomAttr = this.tempMarkDom.getBoundingClientRect();
+        left = tempDomAttr.left + this.tempMarkDom.offsetWidth / 2;
+        if (tempDomAttr.width + tempDomAttr.left > window.innerWidth) {
+          left = tempDomAttr.left;
         }
+        top = tempDomAttr.top;
+      }
+      if (this.userAgent.isPC) {
+        this.btn_Box.style.top = top + window.scrollY - 50 + 'px';
         this.arrow.style.left = left + 'px';
       } else {
-        this.btn_Box.style.top = this.pageY - 80 + 'px';
+        top = this.tempMarkDom ? top + window.scrollY - 50 : this.touch.pageY - 80;
+        left = this.tempMarkDom ? left : this.touch.pageX;
+        this.debug_event.innerHTML = top;
+        this.btn_Box.style.top = top + 'px';
+        this.arrow.style.left = left + 'px';
       }
     }
 
@@ -491,8 +511,9 @@
       const {
         parentClassName
       } = this.tempMarkerInfo;
-      if (this.isPc) {
-        this.tempMarkDom.className = this.MAKRED_CLASSNAME;
+
+      if (this.userAgent.isPC) {
+        this.tempMarkDom.className = this.MARKED_CLASSNAME;
         Object.keys(this.markedStyles).forEach(key => {
           this.tempMarkDom.style[key] = this.markedStyles[key];
         });
@@ -500,9 +521,10 @@
       } else {
         const text = this.selectedText.toString();
         const rang = this.selectedText.getRangeAt(0);
-        const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles);
+        const span = setTextSelected(this.MARKED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles);
         rang.surroundContents(span);
       }
+
       if (!this.selectedMarkers[parentClassName]) {
         this.selectedMarkers[parentClassName] = [this.tempMarkerInfo];
       } else {
@@ -555,7 +577,8 @@
 
     del(e) {
       e.preventDefault();
-      this.tempMarkDom = null;
+      if (this)
+        this.tempMarkDom = null;
       const dom = document.getElementById(this.deleteId);
       const className = dom.parentNode.className.split(' ');
       const parentClassName = className[className.length - 1];
@@ -573,7 +596,7 @@
           currentNode.splitText(marker.start);
           const nextNode = currentNode.nextSibling;
           nextNode.splitText(marker.end - marker.start);
-          const markedNode = setTextSelected(this.MAKRED_CLASSNAME, nextNode.textContent, marker.id, this.markedStyles);
+          const markedNode = setTextSelected(this.MARKED_CLASSNAME, nextNode.textContent, marker.id, this.markedStyles);
           dom.replaceChild(markedNode, nextNode);
         });
       });
@@ -585,8 +608,16 @@
       return this.selectedText.getRangeAt(0).endContainer === this.selectedText.getRangeAt(0).startContainer
     }
 
-    checkSelectionTextLength(){
+    checkNoSelectionText() {
       return this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt
+    }
+
+    removeFocusStyle() {
+      const focusMarker = document.getElementsByClassName(this.FOUCE_MARKED_CLASSNAME)[0];
+      if (focusMarker) {
+        focusMarker.className = this.MARKED_CLASSNAME;
+        setDomStyles(focusMarker, this.markedStyles);
+      }
     }
 
   }

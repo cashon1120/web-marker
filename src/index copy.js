@@ -41,8 +41,6 @@ class Marker {
  * @param options.onSave: 标记后回调, 必填
  */
 
-let testnumber = 0
-
 class WebTextMarker {
   constructor(options) {
 
@@ -84,12 +82,6 @@ class WebTextMarker {
       ...options.focusMarkedStyles
     }
 
-    this.tempMarkerStyles = {
-      color: '#fff',
-      backgroundColor: '#000',
-      ...options.focusMarkedStyles
-    }
-
     this.options = options || {}
 
     // 所有标记文本, 格式为: {parentClassName: [Marker, Marker, ...]}, 最后转换成json字符串保存到数据库
@@ -100,8 +92,6 @@ class WebTextMarker {
 
     // 临时标记节点, 主要是 PC 端用
     this.tempMarkDom = null
-
-    this.hasTempDom = false
 
     // 临时保存标记信息, 鼠标抬起时设置, 解决点击"标记"按钮时 window.getSelection 影响 this.selectedText 的问题
     this.tempMarkerInfo = {}
@@ -128,6 +118,8 @@ class WebTextMarker {
       debug
     } = this.options
 
+    console.log(window.getSelection)
+
     // 获取浏览器环境
     this.userAgent = getUserAgent()
 
@@ -143,6 +135,7 @@ class WebTextMarker {
       this.debug_userAgaent.innerHTML = `
         android: ${this.userAgent.isAndroid};&nbsp;&nbsp;&nbsp;
         iOS: ${this.userAgent.isiOS};&nbsp;&nbsp;&nbsp;
+        safari: ${this.userAgent.isSafari};&nbsp;&nbsp;&nbsp;
         pc: ${this.userAgent.isPC}`
     }
 
@@ -159,6 +152,8 @@ class WebTextMarker {
     // 移动端在选择文本的时候无法监听移动事件, 所以分开处理, 移动端口直接在 selectionchange 事件中控制流程
     // PC 端的优势在选中文本后先添加一个临时节点, 方便定位, 鼠标抬起后再执行后续, 移动端暂不能做到
 
+
+    //  if (this.userAgent.isPC && !this.userAgent.isSafari) {
     if (this.userAgent.isPC) {
       document.addEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp.bind(this))
     }
@@ -169,15 +164,13 @@ class WebTextMarker {
 
     if (window.getSelection()) {
       this.selectedText = window.getSelection()
-      // 没有选中文本时隐藏弹框1
-      if (this.isMarked) {
+      // 没有选中文本时隐藏弹框
+      if (this.checkNoSelectionText() && !this.isMarked) {
+        this.hide()
         return
       }
+
       if (this.userAgent.isPC) {
-        if (this.checkNoSelectionText() && !this.isMarked && !this.hasTempDom) {
-          this.hide()
-          return
-        }
         // 当前选中的是已标记节点不执行任何操作
         if (this.tempMarkDom && this.tempMarkDom.className.indexOf(this.MARKED_CLASSNAME) > -1) return
         return
@@ -186,14 +179,14 @@ class WebTextMarker {
       /*** 下面是移动端的处理 ***/
 
       // 选中的是已标记文本
-
-      if (this.checkNoSelectionText() && !this.isMarked) {
-        this.hide()
+      if (this.isMarked) {
         return
       }
+
       const {
         commonAncestorContainer
       } = this.selectedText.getRangeAt(0)
+
 
       if (!this.checkSelectionCount()) {
         this.hide()
@@ -220,17 +213,12 @@ class WebTextMarker {
   // 鼠标按下
   handleMouseDown(e) {
     // e.preventDefault()
-    if (this.userAgent.isPC) {
-      this.pageY = e.pageY
-
-    } else {
+    if (!this.userAgent.isPC) {
       this.touch = e.touches[0]
+    } else {
+      this.pageY = e.pageY
     }
-    const tempDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0]
-    if (tempDom) {
-      mergeTextNode(tempDom)
-      this.hide()
-    }
+    console.log(this.pageY)
     const target = e.target
     if (this.options.debug) {
       this.debug_event.innerHTML = `当前坐标: ${this.pageY}, 点击目标: ${e.target.className}`
@@ -267,7 +255,7 @@ class WebTextMarker {
       }
 
       setTimeout(() => {
-        if (this.checkNoSelectionText() && !this.isMarked && !this.hasTempDom) {
+        if (this.checkNoSelectionText() && !this.isMarked) {
           this.hide()
         }
       }, 0);
@@ -299,25 +287,25 @@ class WebTextMarker {
     const className = commonAncestorContainer.parentNode.className.split(' ')
     let parentClassName = className[className.length - 1]
     this.tempMarkerInfo = new Marker(setuuid(), parentClassName, 0, startIndex, endIndex)
-    this.hasTempDom = true
     if (this.userAgent.isPC) {
+
       const text = this.selectedText.toString()
       const rang = this.selectedText.getRangeAt(0)
-      const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id, this.tempMarkerStyles)
+      const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles)
+      // rang.collapsed = true
+      console.log(rang)
       rang.surroundContents(span)
     }
-
     this.show()
   }
 
   hide() {
+
     setDomDisplay(this.btn_Box, 'none')
     this.removeFocusStyle()
     if (this.userAgent.isPC) {
-      const tempDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0]
-      if (!tempDom || tempDom.className.indexOf(this.MARKED_CLASSNAME) > -1) return
-      mergeTextNode(tempDom)
-      this.hasTempDom = false
+      if (!this.tempMarkDom || this.tempMarkDom.className.indexOf(this.MARKED_CLASSNAME) > -1) return
+      mergeTextNode(this.tempMarkDom)
     } else {
       this.tempMarkDom = null
     }
@@ -330,28 +318,23 @@ class WebTextMarker {
     let tempDomAttr = null
     let left = '50%'
     let top = 0
-    let tempDom = null
     if (this.tempMarkDom) {
-      tempDom = this.tempMarkDom
-    } else {
-      tempDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0]
-    }
-
-    if (tempDom) {
-      tempDomAttr = tempDom.getBoundingClientRect()
-      left = tempDomAttr.left + tempDom.offsetWidth / 2
+      tempDomAttr = this.tempMarkDom.getBoundingClientRect()
+      left = tempDomAttr.left + this.tempMarkDom.offsetWidth / 2
       if (tempDomAttr.width + tempDomAttr.left > window.innerWidth) {
         left = tempDomAttr.left + 5
       }
       top = tempDomAttr.top
+    } else {
+      top = this.userAgent.isSafari ? this.pageY - 20 : top
     }
 
     if (this.userAgent.isPC) {
       this.btn_Box.style.top = top + window.scrollY - 50 + 'px'
       this.arrow.style.left = left + 'px'
     } else {
-      top = tempDom ? top + window.scrollY - 50 : this.touch.pageY - 80
-      left = tempDom ? left : this.touch.pageX
+      top = this.tempMarkDom ? top + window.scrollY - 50 : this.touch.pageY - 80
+      left = this.tempMarkDom ? left : this.touch.pageX
       this.debug_event.innerHTML = top
       this.btn_Box.style.top = top + 'px'
       this.arrow.style.left = left + 'px'
@@ -363,16 +346,19 @@ class WebTextMarker {
     const {
       parentClassName
     } = this.tempMarkerInfo
-    if (this.userAgent.isPC) {
-      const tempMarkDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0]
-      tempMarkDom.className = this.MARKED_CLASSNAME
+
+    if (this.userAgent.isPC && !this.userAgent.isSafari) {
+      this.tempMarkDom.className = this.MARKED_CLASSNAME
       Object.keys(this.markedStyles).forEach(key => {
-        tempMarkDom.style[key] = this.markedStyles[key]
+        this.tempMarkDom.style[key] = this.markedStyles[key]
       })
+      this.tempMarkDom = null
     } else {
+      
       const text = this.selectedText.toString()
       const rang = this.selectedText.getRangeAt(0)
       const span = setTextSelected(this.MARKED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles)
+      console.log(rang)
       rang.surroundContents(span);
     }
 

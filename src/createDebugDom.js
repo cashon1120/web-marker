@@ -19,14 +19,14 @@ const createDebugDom = textMarker => {
     setDomStyles(debugDom, styles)
     debugDom.innerHTML = `
       <div id="debug_userAgaent"></div>
+      <div id="debug_selectionText">选中文本:</div>
       <div id="debug_event">事件:</div>
     `
 
-    // <div id="debug_selectionText">选中文本:</div>
-
+    // 
     document.body.appendChild(debugDom)
     textMarker.debug_userAgaent = document.getElementById('debug_userAgaent')
-    // textMarker.debug_selectionText = document.getElementById('debug_selectionText')
+    textMarker.debug_selectionText = document.getElementById('debug_selectionText')
     textMarker.debug_event = document.getElementById('debug_event')
   }
 

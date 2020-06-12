@@ -40,6 +40,9 @@ export const getUserAgent = () => {
 }
 
 export const setMarkClassName = (dom, index = 1) => {
+  if(dom === document.body){
+    dom.className = '_WM-0'
+  }
   if (dom.childNodes) {
     for (let i = 0; i < dom.childNodes.length; i++) {
       const childNode = dom.childNodes[i]

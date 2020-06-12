@@ -45,6 +45,9 @@
   };
 
   const setMarkClassName = (dom, index = 1) => {
+    if(dom === document.body){
+      dom.className = '_WM-0';
+    }
     if (dom.childNodes) {
       for (let i = 0; i < dom.childNodes.length; i++) {
         const childNode = dom.childNodes[i];
@@ -93,61 +96,63 @@
   };
 
   const createBtnDom = (textMarker, styles) => {
-      const defaultStyles = {
-        position: 'absolute',
-        textAlign: 'center',
-        width: '100%',
-        left: 0,
-        top: 0,
-        padding: '0 15px',
-        height: '35px',
-        lineHeight: '35px',
-        backgroundColor: 'black',
-        borderRadius: 3,
-        display: 'none',
-        color: '#fff',
-        transition: 'all .3s',
-        boxSizing: 'border-box',
-        ...styles
-      };
-      const btnBox = document.createElement('div');
+    const defaultStyles = {
+      position: 'absolute',
+      textAlign: 'center',
+      width: '100%',
+      left: 0,
+      top: 0,
+      padding: '0 15px',
+      height: '35px',
+      lineHeight: '35px',
+      backgroundColor: 'black',
+      borderRadius: 3,
+      display: 'none',
+      color: '#fff',
+      transition: 'all .3s',
+      boxSizing: 'border-box',
+      ...styles
+    };
+    const btnBox = document.createElement('div');
 
-      btnBox.id = 'webMarkerBtnBox';
-      setDomStyles(btnBox, defaultStyles);
+    btnBox.id = 'webMarkerBtnBox';
+    setDomStyles(btnBox, defaultStyles);
 
-      btnBox.style.backgroundColor = 'transparent';
-      const divStyle = `flex: 1; background-color: ${defaultStyles.backgroundColor}; border-right: 1px solid rgba(255,255,255,.3); box-sizing: border-box;`; 
-      btnBox.innerHTML = `
+    btnBox.style.backgroundColor = 'transparent';
+    const divStyle = `flex: 1; background-color: ${defaultStyles.backgroundColor}; border-right: 1px solid rgba(255,255,255,.3); box-sizing: border-box;`;
+    btnBox.innerHTML = `
       <div style="${divStyle}" id="webMarker_btn_mark">标记</div>
       <div style="${divStyle}" id="webMarker_btn_delete">删除选中标记</div>
       <div style="${divStyle}; border-right: 0" id="webMarker_btn_cancel">取消</div>
       <div id="webMarker_arrow"></div>
     `;
 
-      document.body.appendChild(btnBox);
+    document.body.appendChild(btnBox);
 
-      const arrow = document.getElementById('webMarker_arrow');
-      arrow.style.position = 'absolute';
-      arrow.style.width = '10px';
-      arrow.style.height = '10px';
-      arrow.style.backgroundColor = defaultStyles.backgroundColor;
-      arrow.style.left = '50%';
-      arrow.style.marginLeft = '-5px';
-      arrow.style.bottom = '-5px';
-      arrow.style.transform = 'rotate(45deg)';
-      arrow.style.transition = 'all .3s';
+    const arrow = document.getElementById('webMarker_arrow');
+    arrow.style.position = 'absolute';
+    arrow.style.width = '10px';
+    arrow.style.height = '10px';
+    arrow.style.backgroundColor = defaultStyles.backgroundColor;
+    arrow.style.left = '50%';
+    arrow.style.marginLeft = '-5px';
+    arrow.style.bottom = '-5px';
+    arrow.style.transform = 'rotate(45deg)';
+    arrow.style.transition = 'all .3s';
 
-      textMarker.arrow = arrow;
-      textMarker.btn_Box = document.getElementById('webMarkerBtnBox');
-      textMarker.btn_mark = document.getElementById('webMarker_btn_mark');
-      textMarker.btn_cancel = document.getElementById('webMarker_btn_cancel');
-      textMarker.btn_delete = document.getElementById('webMarker_btn_delete');
+    textMarker.arrow = arrow;
+    textMarker.btn_Box = document.getElementById('webMarkerBtnBox');
+    textMarker.btn_mark = document.getElementById('webMarker_btn_mark');
+    textMarker.btn_cancel = document.getElementById('webMarker_btn_cancel');
+    textMarker.btn_delete = document.getElementById('webMarker_btn_delete');
 
-      textMarker.btn_mark.addEventListener(getUserAgent().eventName.mousedown, textMarker.mark.bind(textMarker));
-      textMarker.btn_cancel.addEventListener(getUserAgent().eventName.mousedown, textMarker.hide.bind(textMarker));
-      textMarker.btn_delete.addEventListener(getUserAgent().eventName.mousedown, textMarker.del.bind(textMarker));
-    
-    };
+    textMarker.btn_mark.addEventListener(getUserAgent().eventName.mousedown, textMarker.mark.bind(textMarker));
+    textMarker.btn_cancel.addEventListener(getUserAgent().eventName.mousedown, textMarker.hide.bind(textMarker));
+    textMarker.btn_delete.addEventListener(getUserAgent().eventName.mousedown, textMarker.del.bind(textMarker));
+
+
+
+  };
 
   const createDebugDom = textMarker => {
       const styles = {
@@ -168,14 +173,14 @@
       setDomStyles(debugDom, styles);
       debugDom.innerHTML = `
       <div id="debug_userAgaent"></div>
+      <div id="debug_selectionText">选中文本:</div>
       <div id="debug_event">事件:</div>
     `;
 
-      // <div id="debug_selectionText">选中文本:</div>
-
+      // 
       document.body.appendChild(debugDom);
       textMarker.debug_userAgaent = document.getElementById('debug_userAgaent');
-      // textMarker.debug_selectionText = document.getElementById('debug_selectionText')
+      textMarker.debug_selectionText = document.getElementById('debug_selectionText');
       textMarker.debug_event = document.getElementById('debug_event');
     };
 
@@ -200,15 +205,6 @@
       }
     }
   }
-
-  /**
-   * @class WebTextMarker
-   * @param options.defaultMarkers: 初始标记数据
-   * @param options.markedStyles: 标记文本样式
-   * @param options.btnStyles: 操作框样式
-   * @param options.focusMarkedStyles: 选中已标记文本样式
-   * @param options.onSave: 标记后回调, 必填
-   */
 
   class WebTextMarker {
     constructor(options) {
@@ -251,6 +247,12 @@
         ...options.focusMarkedStyles
       };
 
+      this.tempMarkerStyles = {
+        color: '#fff',
+        backgroundColor: '#000',
+        ...options.focusMarkedStyles
+      };
+
       this.options = options || {};
 
       // 所有标记文本, 格式为: {parentClassName: [Marker, Marker, ...]}, 最后转换成json字符串保存到数据库
@@ -261,6 +263,8 @@
 
       // 临时标记节点, 主要是 PC 端用
       this.tempMarkDom = null;
+
+      this.hasTempDom = false;
 
       // 临时保存标记信息, 鼠标抬起时设置, 解决点击"标记"按钮时 window.getSelection 影响 this.selectedText 的问题
       this.tempMarkerInfo = {};
@@ -287,8 +291,6 @@
         debug
       } = this.options;
 
-      console.log(window.getSelection);
-
       // 获取浏览器环境
       this.userAgent = getUserAgent();
 
@@ -304,7 +306,6 @@
         this.debug_userAgaent.innerHTML = `
         android: ${this.userAgent.isAndroid};&nbsp;&nbsp;&nbsp;
         iOS: ${this.userAgent.isiOS};&nbsp;&nbsp;&nbsp;
-        safari: ${this.userAgent.isSafari};&nbsp;&nbsp;&nbsp;
         pc: ${this.userAgent.isPC}`;
       }
 
@@ -321,9 +322,7 @@
       // 移动端在选择文本的时候无法监听移动事件, 所以分开处理, 移动端口直接在 selectionchange 事件中控制流程
       // PC 端的优势在选中文本后先添加一个临时节点, 方便定位, 鼠标抬起后再执行后续, 移动端暂不能做到
 
-
-      //  if (this.userAgent.isPC && !this.userAgent.isSafari) {
-      if (this.userAgent.isPC && !this.userAgent.isSafari) {
+      if (this.userAgent.isPC) {
         document.addEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp.bind(this));
       }
     }
@@ -333,13 +332,15 @@
 
       if (window.getSelection()) {
         this.selectedText = window.getSelection();
-        // 没有选中文本时隐藏弹框
-        if (this.checkNoSelectionText() && !this.isMarked) {
-          this.hide();
+        // 没有选中文本时隐藏弹框1
+        if (this.isMarked) {
           return
         }
-      
-        if (this.userAgent.isPC && !this.userAgent.isSafari) {
+        if (this.userAgent.isPC) {
+          if (this.checkNoSelectionText() && !this.isMarked && !this.hasTempDom) {
+            this.hide();
+            return
+          }
           // 当前选中的是已标记节点不执行任何操作
           if (this.tempMarkDom && this.tempMarkDom.className.indexOf(this.MARKED_CLASSNAME) > -1) return
           return
@@ -348,15 +349,15 @@
         /*** 下面是移动端的处理 ***/
 
         // 选中的是已标记文本
-        if (this.isMarked) {
+
+        if (this.checkNoSelectionText() && !this.isMarked) {
+          this.hide();
           return
         }
-
         const {
           commonAncestorContainer
         } = this.selectedText.getRangeAt(0);
 
-        
         if (!this.checkSelectionCount()) {
           this.hide();
           return
@@ -368,7 +369,7 @@
         }
 
         if (this.selectedText.toString().length > 0) {
-        
+
           this.handleMouseUp();
         }
 
@@ -382,12 +383,17 @@
     // 鼠标按下
     handleMouseDown(e) {
       // e.preventDefault()
-      if (!this.userAgent.isPC) {
-        this.touch = e.touches[0];
-      } else {
+      if (this.userAgent.isPC) {
         this.pageY = e.pageY;
+
+      } else {
+        this.touch = e.touches[0];
       }
-      console.log(this.pageY);
+      const tempDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0];
+      if (tempDom) {
+        mergeTextNode(tempDom);
+        this.hide();
+      }
       const target = e.target;
       if (this.options.debug) {
         this.debug_event.innerHTML = `当前坐标: ${this.pageY}, 点击目标: ${e.target.className}`;
@@ -417,14 +423,14 @@
     // 鼠标抬起事件
     handleMouseUp() {
 
-      if (this.userAgent.isPC && !this.userAgent.isSafari) {
+      if (this.userAgent.isPC) {
 
         if (this.checkNoSelectionText()) {
           return
         }
 
         setTimeout(() => {
-          if (this.checkNoSelectionText() && !this.isMarked) {
+          if (this.checkNoSelectionText() && !this.isMarked && !this.hasTempDom) {
             this.hide();
           }
         }, 0);
@@ -437,10 +443,8 @@
         if (disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
           return
         }
-
-
       }
-      
+
       const {
         commonAncestorContainer
       } = this.selectedText.getRangeAt(0);
@@ -458,14 +462,14 @@
       const className = commonAncestorContainer.parentNode.className.split(' ');
       let parentClassName = className[className.length - 1];
       this.tempMarkerInfo = new Marker(setuuid(), parentClassName, 0, startIndex, endIndex);
-      if (this.userAgent.isPC && !this.userAgent.isSafari) {
-       
+      this.hasTempDom = true;
+      if (this.userAgent.isPC) {
         const text = this.selectedText.toString();
         const rang = this.selectedText.getRangeAt(0);
-        const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id);
+        const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id, this.tempMarkerStyles);
         rang.surroundContents(span);
-        this.tempMarkDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0];
       }
+
       this.show();
     }
 
@@ -473,8 +477,10 @@
       setDomDisplay(this.btn_Box, 'none');
       this.removeFocusStyle();
       if (this.userAgent.isPC) {
-        if (!this.tempMarkDom || this.tempMarkDom.className.indexOf(this.MARKED_CLASSNAME) > -1) return
-        mergeTextNode(this.tempMarkDom);
+        const tempDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0];
+        if (!tempDom || tempDom.className.indexOf(this.MARKED_CLASSNAME) > -1) return
+        mergeTextNode(tempDom);
+        this.hasTempDom = false;
       } else {
         this.tempMarkDom = null;
       }
@@ -487,23 +493,28 @@
       let tempDomAttr = null;
       let left = '50%';
       let top = 0;
+      let tempDom = null;
       if (this.tempMarkDom) {
-        tempDomAttr = this.tempMarkDom.getBoundingClientRect();
-        left = tempDomAttr.left + this.tempMarkDom.offsetWidth / 2;
+        tempDom = this.tempMarkDom;
+      } else {
+        tempDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0];
+      }
+
+      if (tempDom) {
+        tempDomAttr = tempDom.getBoundingClientRect();
+        left = tempDomAttr.left + tempDom.offsetWidth / 2;
         if (tempDomAttr.width + tempDomAttr.left > window.innerWidth) {
           left = tempDomAttr.left + 5;
         }
         top = tempDomAttr.top;
-      }else {
-        top = this.userAgent.isSafari ? this.pageY - 20 : top;
       }
-      
+
       if (this.userAgent.isPC) {
         this.btn_Box.style.top = top + window.scrollY - 50 + 'px';
         this.arrow.style.left = left + 'px';
       } else {
-        top = this.tempMarkDom ? top + window.scrollY - 50 : this.touch.pageY - 80;
-        left = this.tempMarkDom ? left : this.touch.pageX;
+        top = tempDom ? top + window.scrollY - 50 : this.touch.pageY - 80;
+        left = tempDom ? left : this.touch.pageX;
         this.debug_event.innerHTML = top;
         this.btn_Box.style.top = top + 'px';
         this.arrow.style.left = left + 'px';
@@ -515,13 +526,12 @@
       const {
         parentClassName
       } = this.tempMarkerInfo;
-
-      if (this.userAgent.isPC && !this.userAgent.isSafari) {
-        this.tempMarkDom.className = this.MARKED_CLASSNAME;
+      if (this.userAgent.isPC) {
+        const tempMarkDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0];
+        tempMarkDom.className = this.MARKED_CLASSNAME;
         Object.keys(this.markedStyles).forEach(key => {
-          this.tempMarkDom.style[key] = this.markedStyles[key];
+          tempMarkDom.style[key] = this.markedStyles[key];
         });
-        this.tempMarkDom = null;
       } else {
         const text = this.selectedText.toString();
         const rang = this.selectedText.getRangeAt(0);

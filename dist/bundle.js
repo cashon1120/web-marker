@@ -349,27 +349,16 @@
         /*** 下面是移动端的处理 ***/
 
         // 选中的是已标记文本
-
-        if (this.checkNoSelectionText() && !this.isMarked) {
-          this.hide();
-          return
-        }
         const {
           commonAncestorContainer
         } = this.selectedText.getRangeAt(0);
 
-        if (!this.checkSelectionCount()) {
+        if (this.checkNoSelectionText() && !this.isMarked || !this.checkSelectionCount() || disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
           this.hide();
           return
         }
 
-
-        if (disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
-          return
-        }
-
         if (this.selectedText.toString().length > 0) {
-
           this.handleMouseUp();
         }
 
@@ -406,11 +395,8 @@
         setDomDisplay(this.btn_mark, 'none');
         setDomDisplay(this.btn_delete, 'block');
         this.deleteId = e.target.id;
-
         this.isMarked = true;
-
         this.tempMarkDom = target;
-
         setTimeout(() => {
           this.show();
         }, 0);
@@ -434,13 +420,11 @@
             this.hide();
           }
         }, 0);
+
         const {
           commonAncestorContainer
         } = this.selectedText.getRangeAt(0);
-        if (!this.checkSelectionCount()) {
-          return
-        }
-        if (disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
+        if (!this.checkSelectionCount() || disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
           return
         }
       }

@@ -6,6 +6,7 @@ const createBtnDom = (textMarker, styles) => {
       textAlign: 'center',
       width: '100%',
       left: 0,
+      top: 0,
       padding: '0 15px',
       height: '35px',
       lineHeight: '35px',
@@ -52,8 +53,8 @@ const createBtnDom = (textMarker, styles) => {
     textMarker.btn_delete = document.getElementById('webMarker_btn_delete')
 
     textMarker.btn_mark.addEventListener(getUserAgent().eventName.mousedown, textMarker.mark.bind(textMarker))
-    textMarker.btn_cancel.addEventListener('click', textMarker.hide.bind(textMarker))
-    textMarker.btn_delete.addEventListener('click', textMarker.del.bind(textMarker))
+    textMarker.btn_cancel.addEventListener(getUserAgent().eventName.mousedown, textMarker.hide.bind(textMarker))
+    textMarker.btn_delete.addEventListener(getUserAgent().eventName.mousedown, textMarker.del.bind(textMarker))
   
   }
 

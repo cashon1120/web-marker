@@ -7,7 +7,9 @@ import {
   mergeTextNode,
 } from './utils'
 import createBtnDom from './createBtnDom.js'
+import createDebugDom from './createDebugDom.js'
 
+const disabledElement = ['BUTTON', 'H1', 'H2', 'IMG']
 
 /**
  * @class Marker
@@ -59,6 +61,8 @@ class WebTextMarker {
     this.MAKRED_CLASSNAME = 'web_marker'
     this.TEMP_MARKED_CLASSNAME = 'temp_marker'
 
+
+
     // 标记样式
     this.markedStyles = {
       color: '#fff',
@@ -67,7 +71,7 @@ class WebTextMarker {
     }
 
     // 回调
-    this.onSave = options.onSave
+    this.options = options || {}
 
     // 所有标记文本, 格式为: {parentClassName: [Marker, Marker, ...]}, 最后转换成json字符串保存到数据库
     this.selectedMarkers = {}
@@ -87,95 +91,181 @@ class WebTextMarker {
     // 是否已标记
     this.isMarked = false
 
+    this.pageY = 0
+
+    this.touch = null
+
+    this.isPc = true
+
+    this.init()
+  }
+
+  init() {
+    const {
+      defaultMarkers,
+      btnStyles,
+      debug
+    } = this.options
+
     // 获取浏览器环境
     this.userAgent = getUserAgent()
+    if (this.userAgent.isAndroid || this.userAgent.isiOS) {
+      this.isPc = false
+    }
 
     // 给每个节点加上特殊标识, 方便后面操作
     setMarkClassName(document.body)
 
     // 创建按钮节点
-    createBtnDom(this, options.btnStyles)
+    createBtnDom(this, btnStyles)
+
+    // 创建调试节点
+    if (debug) {
+      createDebugDom(this)
+      this.debug_userAgaent.innerHTML = `安卓: ${this.userAgent.isAndroid};&nbsp;&nbsp;&nbsp;iOS: ${this.userAgent.isiOS};`
+    }
 
     // 当默认数据时, 设置标记状态, defaultMarkers 格式 this.selectedMarkers 
-    if (options.defaultMarkers && Object.keys(options.defaultMarkers).length > 0) {
-      this.selectedMarkers = options.defaultMarkers
+    if (defaultMarkers && Object.keys(defaultMarkers).length > 0) {
+      this.selectedMarkers = defaultMarkers
       this.setDefaultMarkers()
     }
 
 
-
-    // 监听事件
+    // 监听事件{}
     document.addEventListener('selectionchange', this.handleSelectionChange.bind(this))
     document.addEventListener(this.userAgent.eventName.mousedown, this.handleMouseDown.bind(this))
-    document.addEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp.bind(this))
+    if (this.isPc) {
+      document.addEventListener(this.userAgent.eventName.mouseup, this.handleMouseUp.bind(this))
+    } else {
+      document.addEventListener(this.userAgent.eventName.mousemove, this.handleMouseMove.bind(this))
+    }
   }
 
   // 选中文本事件
   handleSelectionChange() {
+
     if (window.getSelection()) {
       this.selectedText = window.getSelection()
-      if(this.tempMarkDom && this.tempMarkDom.className === 'web_marker') return
-      if (this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt) {
-        this.hide()
+      if (this.isPc) {
+        if (this.tempMarkDom && this.tempMarkDom.className === this.MAKRED_CLASSNAME) return
+        if (this.checkSelectionTextLength()) {
+          this.hide()
+        }
+        return
       }
+
+      /*** 下面是移动端的处理 ***/
+
+      // 没有选中文本时隐藏弹框
+      if (this.checkSelectionTextLength() && !this.isMarked) {
+        this.hide()
+        return
+      }
+
+      const {
+        commonAncestorContainer
+      } = this.selectedText.getRangeAt(0)
+
+
+      if (!this.checkSelectionCount()) {
+        this.hide()
+        return
+      }
+
+
+      if (disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
+        return
+      }
+
+      if (this.selectedText.toString().length > 0 && !this.isPc) {
+        this.handleMouseUp()
+      }
+
+      // 调试
+      if (this.options.debug) {
+        this.debug_selectionText.innerHTML = `选中文本: ${this.selectedText.toString()}`
+      }
+
     } else {
-      return
+      if (this.options.debug) {
+        this.debug_selectionText.innerHTML = '不支持 window.getSelection 属性'
+      }
     }
   }
 
   // 鼠标按下
   handleMouseDown(e) {
+    // e.preventDefault()
+    if (!this.isPc) {
+      this.touch = e.touches[0]
+    } else {
+      this.pageY = e.pageY
+    }
     const target = e.target
+    if (this.options.debug) {
+      this.debug_event.innerHTML = `当前坐标: ${this.pageY}, 点击目标: ${e.target.className}`
+    }
     // 当选中的文本已经标记时的处理, 隐藏 "标记" 按钮, 显示 "删除" 按钮
     if (target.className === this.MAKRED_CLASSNAME) {
-      this.pageY = e.pageY
       setDomDisplay(this.btn_mark, 'none')
       setDomDisplay(this.btn_delete, 'block')
       this.deleteId = e.target.id
       this.isMarked = true
-      this.tempMarkDom = target
-      this.show()
+      if (this.isPc) {
+        this.tempMarkDom = target
+      }
+      setTimeout(() => {
+        this.show()
+      }, 10);
+
       return
     }
     this.isMarked = false
   }
 
+  handleMouseMove(e) {
+    // e.preventDefault()
+    if (this.userAgent.isAndroid || this.userAgent.isiOS) {
+      this.touch = e.touches[0]
+      this.pageY = this.touch.pageY
+    } else {
+      this.pageY = e.pageY
+    }
+
+  }
+
   // 鼠标抬起事件
-  handleMouseUp(e) {
-    if (this.isMarked) {
-      return
-    }
+  handleMouseUp() {
 
-    if (this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt) {
-      return
-    }
+    // console.log(this.selectedText)
+    // console.log(this.selectedText.getRangeAt(0))
 
-    setTimeout(() => {
-      if (this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt) {
-        this.hide()
+    if (this.isPc) {
+
+      if (this.checkSelectionTextLength()) {
+        return
       }
-    }, 0);
 
-
-    console.log(this.selectedText)
-    console.log(this.selectedText.getRangeAt(0))
+      setTimeout(() => {
+        if (this.checkSelectionTextLength() && !this.isMarked) {
+          this.hide()
+        }
+      }, 0);
+      const {
+        commonAncestorContainer
+      } = this.selectedText.getRangeAt(0)
+      if (!this.checkSelectionCount()) {
+        return
+      }
+      if (disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
+        return
+      }
+    }
 
     const {
       commonAncestorContainer
     } = this.selectedText.getRangeAt(0)
-
-    
-    // 判断是否选中了多个， 如果只选中了一个节点 nodeType === 3
-    // 还有一种判断方式, getRangeAt(0).endContainer !== getRangeAt(0).startContainer 意味着选中了多个节点
-    if (commonAncestorContainer.nodeType !== 3 || commonAncestorContainer.parentNode.className === this.MAKRED_CLASSNAME) {
-      return
-    }
-    
-    // 遇到以下节点时不处理, 可按需要添加
-    const disabledElement = ['BUTTON', 'H1', 'H2', 'IMG']
-    if (disabledElement.includes(commonAncestorContainer.parentNode.nodeName)) {
-      return
-    }
 
     setDomDisplay(this.btn_mark, 'block')
     setDomDisplay(this.btn_delete, 'none')
@@ -191,52 +281,75 @@ class WebTextMarker {
     const className = commonAncestorContainer.parentNode.className.split(' ')
     let parentClassName = className[className.length - 1]
     this.tempMarkerInfo = new Marker(setuuid(), parentClassName, 0, startIndex, endIndex)
+    if (this.isPc) {
 
-    const text = this.selectedText.toString()
-    const rang = this.selectedText.getRangeAt(0)
-    const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id)
-    rang.surroundContents(span);
+      const text = this.selectedText.toString()
+      const rang = this.selectedText.getRangeAt(0)
+      const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id)
+      rang.surroundContents(span);
+      this.tempMarkDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0]
 
-    this.tempMarkDom =  document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0]
-    this.show()
+      this.show()
+    } else {
+
+      this.show()
+    }
+
+
+    if (this.options.debug) {
+      this.debug_event.innerHTML = '当前事件: 正在选择'
+    }
   }
 
   hide() {
     setDomDisplay(this.btn_Box, 'none')
-    if(!this.tempMarkDom || this.tempMarkDom.className === this.MAKRED_CLASSNAME) return
-    mergeTextNode(this.tempMarkDom)
+    if (this.isPc) {
+      if (!this.tempMarkDom || this.tempMarkDom.className === this.MAKRED_CLASSNAME) return
+      mergeTextNode(this.tempMarkDom)
+    }
   }
 
   show() {
     setDomDisplay(this.btn_Box, 'flex')
-    const domAttr = this.tempMarkDom.getBoundingClientRect()
-    this.btn_Box.style.top = domAttr.top + window.scrollY - 50 + 'px'
-    let left =  domAttr.left + this.tempMarkDom.offsetWidth / 2 - 5
-    console.log(domAttr)
-    if(domAttr.width + domAttr.left > window.innerWidth){
-      left = domAttr.left
+    if (this.isPc) {
+      const domAttr = this.tempMarkDom.getBoundingClientRect()
+      this.btn_Box.style.top = domAttr.top + window.scrollY - 50 + 'px'
+      let left = domAttr.left + this.tempMarkDom.offsetWidth / 2 - 5
+      if (domAttr.width + domAttr.left > window.innerWidth) {
+        left = domAttr.left
+      }
+      this.arrow.style.left = left + 'px'
+    } else {
+      this.btn_Box.style.top = this.pageY - 80 + 'px'
     }
-    this.arrow.style.left = left + 'px'
   }
 
   mark(e) {
-    e.preventDefault()
     e.stopPropagation()
-    this.tempMarkDom.className = this.MAKRED_CLASSNAME
-    Object.keys(this.markedStyles).forEach(key => {
-      this.tempMarkDom.style[key] = this.markedStyles[key]
-    })
-    const {parentClassName} = this.tempMarkerInfo
+    const {
+      parentClassName
+    } = this.tempMarkerInfo
+    if (this.isPc) {
+      this.tempMarkDom.className = this.MAKRED_CLASSNAME
+      Object.keys(this.markedStyles).forEach(key => {
+        this.tempMarkDom.style[key] = this.markedStyles[key]
+      })
+      this.tempMarkDom = null
+    } else {
+      const text = this.selectedText.toString()
+      const rang = this.selectedText.getRangeAt(0)
+      const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles)
+      rang.surroundContents(span);
+    }
     if (!this.selectedMarkers[parentClassName]) {
       this.selectedMarkers[parentClassName] = [this.tempMarkerInfo]
     } else {
       this.selectedMarkers[parentClassName].push(this.tempMarkerInfo)
     }
+
     this.resetMarker(parentClassName)
     this.selectedText.removeAllRanges()
-    this.tempMarkDom = null
     this.save()
-
   }
 
   resetMarker(parentClassName) {
@@ -250,40 +363,40 @@ class WebTextMarker {
       }
       // childIndex 为什么是 i - 1 ? 根据当前已经标记节点索引, 在后面反序列的时候才能找到正确位置
       // 比如当前节点内容为"xxx <标记节点>ooo</标记节点>", i 就是 1, 反序列的时候其实他是处于 0 的位置 
-      const childIndex = i - 1  
+      const childIndex = i - 1
       this.selectedMarkers[parentClassName].forEach(marker => {
         if (dom.childNodes[i].id == marker.id) {
           newMarkerArr.push(new Marker(marker.id, '', childIndex, preNodeLength, preNodeLength + node.textContent.length))
         }
       })
     }
-    if(newMarkerArr.length > 0){
+    if (newMarkerArr.length > 0) {
       this.selectedMarkers[parentClassName] = newMarkerArr
-    } else{
+    } else {
       delete this.selectedMarkers[parentClassName]
     }
   }
 
   save() {
     const markersJson = JSON.stringify(this.selectedMarkers)
-    const userAgent = getUserAgent()
     this.hide()
-    if (userAgent.isAndroid) {
+    if (this.userAgent.isAndroid) {
       // window.jsObject...
     }
 
-    if (userAgent.isiOS) {
+    if (this.userAgent.isiOS) {
       // window.webkit.jsObject.callBack.postMessage(this.selectedMarkers)
     }
 
-    if (this.onSave) {
-      this.onSave(markersJson)
+    if (this.options.onSave) {
+      this.options.onSave(markersJson)
     }
 
     console.log(this.selectedMarkers)
   }
 
-  del() {
+  del(e) {
+    e.preventDefault()
     this.tempMarkDom = null
     const dom = document.getElementById(this.deleteId)
     const className = dom.parentNode.className.split(' ')
@@ -307,6 +420,17 @@ class WebTextMarker {
       })
     })
   }
+
+  checkSelectionCount() {
+    // 判断是否选中了多个， 如果只选中了一个节点 nodeType === 3
+    // 还有一种判断方式, getRangeAt(0).endContainer !== getRangeAt(0).startContainer 意味着选中了多个节点
+    return this.selectedText.getRangeAt(0).endContainer === this.selectedText.getRangeAt(0).startContainer
+  }
+
+  checkSelectionTextLength(){
+    return this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt
+  }
+
 }
 
 window.WebTextMarker = WebTextMarker

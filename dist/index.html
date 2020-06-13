@@ -59,50 +59,53 @@
 </body>
 <script src="./bundle.js"></script>
 <script>
-	window.addEventListener('load', () => {
+	// window.addEventListener('load', () => {
 
-		// 测试代码
-		const btn_clearData = document.getElementById('btn_clearData')
-		btn_clearData.addEventListener('click', () => {
-			localStorage.removeItem('markers')
-			location.reload()
-		})
-		// localStorage.removeItem('markers')
-
-
+	// 	// 测试代码
+	// 	const btn_clearData = document.getElementById('btn_clearData')
+	// 	btn_clearData.addEventListener('click', () => {
+	// 		localStorage.removeItem('markers')
+	// 		location.reload()
+	// 	})
+	// 	// localStorage.removeItem('markers')
 
 
-		// 获取已有数据
-		let defaultMarkers = {}
-		if (window.jsObject && window.jsObject.getCallBack) {
-			defaultMarkers = JSON.parse(window.jsObject.getCallBack())
-			document.getElementById('windowobject').innerHTML = JSON.parse(window.jsObject.getCallBack())
-		} else {
+
+
+	// 	// 获取已有数据
+	// 	let defaultMarkers = {}
+	// 	if (window.jsObject && window.jsObject.getCallBack) {
+	// 		if(window.jsObject.getCallBack().length > 0){
+	// 			defaultMarkers = JSON.parse(window.jsObject.getCallBack())
+	// 		}
+			
+	// 		document.getElementById('windowobject').innerHTML = window.jsObject.getCallBack().length
+	// 	} else {
 		
-			defaultMarkers = JSON.parse(localStorage.getItem('markers'))
-			document.getElementById('windowobject').innerHTML = '没有 getCallBack 对象'
-		}
+	// 		defaultMarkers = JSON.parse(localStorage.getItem('markers'))
+	// 		document.getElementById('windowobject').innerHTML = '没有 getCallBack 对象'
+	// 	}
 
-		const myTextMarker = new window.WebTextMarker({
-			defaultMarkers,
-			debug: true,
-			onSave: markers => {
-				markersJson = JSON.stringify(markers)
-				console.log(markersJson)
-				if (myTextMarker.userAgent.isAndroid && window.jsObject) {
-					window.jsObject.save(markersJson)
-					return
-				}
+	// 	const myTextMarker = new window.WebTextMarker({
+	// 		defaultMarkers,
+	// 		debug: true,
+	// 		onSave: markers => {
+	// 			markersJson = JSON.stringify(markers)
+	// 			console.log(markersJson)
+	// 			if (myTextMarker.userAgent.isAndroid && window.jsObject) {
+	// 				window.jsObject.save(markersJson)
+	// 				return
+	// 			}
 
-				if (myTextMarker.userAgent.isiOS) {
-					// window.webkit.jsObject.callBack.postMessage(this.selectedMarkers)
-					return
-				}
+	// 			if (myTextMarker.userAgent.isiOS) {
+	// 				// window.webkit.jsObject.callBack.postMessage(this.selectedMarkers)
+	// 				return
+	// 			}
 
-				localStorage.setItem('markers', markersJson)
-			}
-		})
-	})
+	// 			localStorage.setItem('markers', markersJson)
+	// 		}
+	// 	})
+	// })
 
 </script>
 

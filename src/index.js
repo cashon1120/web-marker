@@ -9,6 +9,7 @@ import {
 } from './utils'
 import createBtnDom from './createBtnDom.js'
 import createDebugDom from './createDebugDom.js'
+import loadData from './loadData'
 
 const disabledElement = ['BUTTON', 'H1', 'H2', 'IMG']
 
@@ -40,8 +41,6 @@ class Marker {
  * @param options.focusMarkedStyles: 选中已标记文本样式
  * @param options.onSave: 标记后回调, 必填
  */
-
-let testnumber = 0
 
 class WebTextMarker {
   constructor(options) {
@@ -454,3 +453,5 @@ class WebTextMarker {
 }
 
 window.WebTextMarker = WebTextMarker
+
+loadData()

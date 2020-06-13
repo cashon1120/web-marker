@@ -34,7 +34,7 @@
 </head>
 
 <body>
-	
+	<div id="windowobject"></div>
 	<h1>这里是标题</h1>
 	疫情未疫情未疫情未疫情未疫情未
 	<div class="test">导致疫情二次暴发。美国国会预算办公室1日发布的数据显示，即使所有救助资金都得以用来缓解新冠疫情影响,<br /><br /><br />疫情未疫情未疫情未疫情未疫情未
@@ -54,6 +54,8 @@
 
 	<span class="header-text">Put this in a headline</span>
 	<button id="btn_clearData" class="test">清除所有数据</button>
+
+
 </body>
 <script src="./bundle.js"></script>
 <script>
@@ -65,18 +67,43 @@
 			localStorage.removeItem('markers')
 			location.reload()
 		})
-
-		const defaultMarkers = JSON.parse(localStorage.getItem('markers'))
 		// localStorage.removeItem('markers')
+
+
+
+
+		// 获取已有数据
+		let defaultMarkers = {}
+		if (window.jsObject && window.jsObject.getCallBack) {
+			defaultMarkers = JSON.parse(window.jsObject.getCallBack())
+			document.getElementById('windowobject').innerHTML = JSON.parse(window.jsObject.getCallBack())
+		} else {
+		
+			defaultMarkers = JSON.parse(localStorage.getItem('markers'))
+			document.getElementById('windowobject').innerHTML = '没有 getCallBack 对象'
+		}
+
 		const myTextMarker = new window.WebTextMarker({
 			defaultMarkers,
 			debug: true,
-			onSave: (markersJson) => {
+			onSave: markers => {
+				markersJson = JSON.stringify(markers)
+				console.log(markersJson)
+				if (myTextMarker.userAgent.isAndroid && window.jsObject) {
+					window.jsObject.save(markersJson)
+					return
+				}
+
+				if (myTextMarker.userAgent.isiOS) {
+					// window.webkit.jsObject.callBack.postMessage(this.selectedMarkers)
+					return
+				}
+
 				localStorage.setItem('markers', markersJson)
 			}
 		})
-
 	})
+
 </script>
 
 </html>

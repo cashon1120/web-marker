@@ -368,7 +368,9 @@ class WebTextMarker {
 
     this.resetMarker(parentClassName)
     this.selectedText.removeAllRanges()
-    this.save()
+    //console.log(this.selectedMarkers)
+    this.hide()
+    // this.save()
   }
 
   resetMarker(parentClassName) {
@@ -397,21 +399,11 @@ class WebTextMarker {
   }
 
   save() {
-    const markersJson = JSON.stringify(this.selectedMarkers)
-    this.hide()
-    if (this.userAgent.isAndroid) {
-      // window.jsObject...
-    }
-
-    if (this.userAgent.isiOS) {
-      // window.webkit.jsObject.callBack.postMessage(this.selectedMarkers)
-    }
-
-    if (this.options.onSave) {
-      this.options.onSave(markersJson)
-    }
-
     console.log(this.selectedMarkers)
+    if (this.options.onSave) {
+      this.options.onSave(this.selectedMarkers)
+    }
+    this.hide()
   }
 
   del(e) {

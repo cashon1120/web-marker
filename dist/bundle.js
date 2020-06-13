@@ -123,7 +123,8 @@
     btnBox.innerHTML = `
       <div style="${divStyle}" id="webMarker_btn_mark">标记</div>
       <div style="${divStyle}" id="webMarker_btn_delete">删除选中标记</div>
-      <div style="${divStyle}; border-right: 0" id="webMarker_btn_cancel">取消</div>
+      <div style="${divStyle}" id="webMarker_btn_cancel">取消</div>
+      <div style="${divStyle}; border-right: 0" id="webMarker_btn_save">保存所有</div>
       <div id="webMarker_arrow"></div>
     `;
 
@@ -145,11 +146,12 @@
     textMarker.btn_mark = document.getElementById('webMarker_btn_mark');
     textMarker.btn_cancel = document.getElementById('webMarker_btn_cancel');
     textMarker.btn_delete = document.getElementById('webMarker_btn_delete');
+    textMarker.btn_save = document.getElementById('webMarker_btn_save');
 
     textMarker.btn_mark.addEventListener(getUserAgent().eventName.mousedown, textMarker.mark.bind(textMarker));
     textMarker.btn_cancel.addEventListener(getUserAgent().eventName.mousedown, textMarker.hide.bind(textMarker));
     textMarker.btn_delete.addEventListener(getUserAgent().eventName.mousedown, textMarker.del.bind(textMarker));
-
+    textMarker.btn_save.addEventListener(getUserAgent().eventName.mousedown, textMarker.save.bind(textMarker));
 
 
   };
@@ -531,7 +533,9 @@
 
       this.resetMarker(parentClassName);
       this.selectedText.removeAllRanges();
-      this.save();
+      //console.log(this.selectedMarkers)
+      this.hide();
+      // this.save()
     }
 
     resetMarker(parentClassName) {
@@ -560,17 +564,11 @@
     }
 
     save() {
-      const markersJson = JSON.stringify(this.selectedMarkers);
-      this.hide();
-      if (this.userAgent.isAndroid) ;
-
-      if (this.userAgent.isiOS) ;
-
-      if (this.options.onSave) {
-        this.options.onSave(markersJson);
-      }
-
       console.log(this.selectedMarkers);
+      if (this.options.onSave) {
+        this.options.onSave(this.selectedMarkers);
+      }
+      this.hide();
     }
 
     del(e) {

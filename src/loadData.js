@@ -1,6 +1,7 @@
 const loadData = () => {
   window.addEventListener('load', () => {
 
+    // localStorage.removeItem('markers')
     // 获取已有数据
     let defaultMarkers = {}
     if (window.jsObject && window.jsObject.getCallBack) {
@@ -8,13 +9,14 @@ const loadData = () => {
         defaultMarkers = JSON.parse(window.jsObject.getCallBack())
       }
       
-      document.getElementById('windowobject').innerHTML = window.jsObject.getCallBack().length
+      // document.getElementById('windowobject').innerHTML = window.jsObject.getCallBack().length
     } else {
     
       defaultMarkers = JSON.parse(localStorage.getItem('markers'))
-      document.getElementById('windowobject').innerHTML = '没有 getCallBack 对象'
+      // document.getElementById('windowobject').innerHTML = '没有 getCallBack 对象'
     }
   
+    console.log(defaultMarkers)
     const myTextMarker = new window.WebTextMarker({
       defaultMarkers,
       debug: true,

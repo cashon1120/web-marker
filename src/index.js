@@ -367,9 +367,7 @@ class WebTextMarker {
 
     this.resetMarker(parentClassName)
     this.selectedText.removeAllRanges()
-    //console.log(this.selectedMarkers)
     this.hide()
-    // this.save()
   }
 
   resetMarker(parentClassName) {
@@ -398,7 +396,6 @@ class WebTextMarker {
   }
 
   save() {
-    console.log(this.selectedMarkers)
     if (this.options.onSave) {
       this.options.onSave(this.selectedMarkers)
     }
@@ -421,6 +418,7 @@ class WebTextMarker {
     const defaultMarkers = this.selectedMarkers
     Object.keys(defaultMarkers).forEach(className => {
       const dom = document.getElementsByClassName(className)[0]
+      if(!dom) return
       defaultMarkers[className].forEach(marker => {
         const currentNode = dom.childNodes[marker.childIndex]
         currentNode.splitText(marker.start);

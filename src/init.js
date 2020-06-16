@@ -6,6 +6,7 @@ const loadData = () => {
 
     createBtnDom()
     loadStyles('./style.css')
+    
     // localStorage.removeItem('markers')
     // 获取已有数据
     let defaultMarkers = {}
@@ -53,6 +54,7 @@ const loadData = () => {
     }
 
     const handleNotes = () => {
+      myTextMarker.mark()
       const id = myTextMarker.getCurrentId()
       if (myTextMarker.userAgent.isAndroid && window.jsObject) {
         window.jsObject.save(id)
@@ -68,6 +70,7 @@ const loadData = () => {
     }
 
     const handleDiscuss = () => {
+      myTextMarker.mark()
       const id = myTextMarker.getCurrentId()
       if (myTextMarker.userAgent.isAndroid && window.jsObject) {
         window.jsObject.save(id)
@@ -83,15 +86,13 @@ const loadData = () => {
     }
 
     const btn_mark = getElementById('webMarker_btn_mark')
-    // const btn_cancel = getElementById('webMarker_btn_cancel')
     const btn_delete = getElementById('webMarker_btn_delete')
     const btn_notes = getElementById('webMarker_btn_notes')
     const btn_discuss = getElementById('webMarker_btn_discuss')
     const btn_save = getElementById('webMarker_btn_save')
   
     const { mousedown } = getUserAgent().eventName
-    btn_mark.addEventListener(mousedown, (e) => myTextMarker.mark(e))
-    // btn_cancel.addEventListener(mousedown, (e) => textMarker.hide(e))
+    btn_mark.addEventListener(mousedown, () => myTextMarker.mark())
     btn_delete.addEventListener(mousedown, handleDelete)
     btn_save.addEventListener(mousedown, handleSave)
     btn_notes.addEventListener(mousedown, handleNotes)

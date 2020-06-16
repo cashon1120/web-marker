@@ -66,7 +66,7 @@ class WebTextMarker {
     this.tempMarkerInfo = {}
 
     // 要删除的标记 id
-    this.currentId = ''
+    this.currentId = null
 
     // 是否已标记
     this.isMarked = false
@@ -252,7 +252,6 @@ class WebTextMarker {
   hide() {
     setDomDisplay(this.btnWrapper, 'none')
     this.removeFocusStyle()
-    this.currentId = null
     if (this.userAgent.isPC) {
       const tempDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0]
       if (!tempDom || tempDom.className.indexOf(this.MARKED_CLASSNAME) > -1) return
@@ -290,15 +289,13 @@ class WebTextMarker {
       }
       top = tempDomAttr.top
     }
-
+    left = Math.min(window.innerWidth - 30, Math.max(10, left - 15)) 
     if (this.userAgent.isPC) {
-      left = Math.min(window.innerWidth - 30, Math.max(10, left - 15)) 
       this.btnWrapper.style.top = top + window.scrollY - 50 + 'px'
       this.arrow.style.left = left + 'px'
     } else {
       top = tempDom ? top + window.scrollY - 50 : this.touch.pageY - 80
       left = tempDom ? left : this.touch.pageX
-      this.debug_event.innerHTML = top
       this.btnWrapper.style.top = top + 'px'
       this.arrow.style.left = left + 'px'
     }
@@ -368,8 +365,7 @@ class WebTextMarker {
   }
 
   // 标记选中文本
-  mark(e) {
-    e.stopPropagation()
+  mark() {
     const {
       parentClassName
     } = this.tempMarkerInfo
@@ -388,7 +384,7 @@ class WebTextMarker {
     } else {
       this.selectedMarkers[parentClassName].push(this.tempMarkerInfo)
     }
-
+    this.currentId = this.tempMarkerInfo.id
     this.resetMarker(parentClassName)
     this.selectedText.removeAllRanges()
     this.hide()
@@ -407,6 +403,7 @@ class WebTextMarker {
 
   // 返回当前选中标记ID
   getCurrentId(){
+    console.log(this)
     return this.currentId
   }
 

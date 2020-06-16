@@ -9,7 +9,7 @@ export default {
     file: 'dist/bundle.js',
     format: 'umd',
     name: 'web-marker',
-    sourcemap: true
+    sourcemap: false
   },
   plugins: [
     eslint(),

@@ -4,12 +4,10 @@ import {
   setTextSelected,
   getUserAgent,
   setMarkClassName,
-  mergeTextNode,
-  setDomStyles
+  mergeTextNode
 } from './utils'
-import createBtnDom from './createBtnDom.js'
 import createDebugDom from './createDebugDom.js'
-import loadData from './loadData'
+import loadData from './init'
 
 const disabledElement = ['BUTTON', 'H1', 'H2', 'IMG']
 
@@ -45,51 +43,13 @@ class Marker {
 class WebTextMarker {
   constructor(options) {
 
-    if (!options || !options.onSave) {
-      throw new Error('options中的 onSave 选项为必填')
-    }
-
-    if (typeof options.onSave !== 'function') {
-      throw new Error('onSave 必须为一个函数')
-    }
-
-    if (options.markedStyles && Object.prototype.toString.call(options.markedStyles) === '[object Object]') {
-      throw new Error('标记样式 markedStyles 必须为一个对象')
-    }
-
-    if (options.btnStyles && Object.prototype.toString.call(options.btnStyles) === '[object Object]') {
-      throw new Error('按钮样式 btnStyles 必须为一个对象')
-    }
-
-    if (options.focusMarkedStyles && Object.prototype.toString.call(options.focusMarkedStyles) === '[object Object]') {
-      throw new Error('标记高亮样式 focusMarkedStyles 必须为一个对象')
-    }
-
-
-    this.MARKED_CLASSNAME = '_web_marker'
-    this.TEMP_MARKED_CLASSNAME = '_temp_marker'
-    this.FOUCE_MARKED_CLASSNAME = '_focus_web_marker'
-
-
-    this.markedStyles = {
-      color: '#fff',
-      backgroundColor: 'cadetblue',
-      ...options.markedStyles
-    }
-
-    this.focusMarkedStyles = {
-      color: '#fff',
-      backgroundColor: '#ffb400',
-      ...options.focusMarkedStyles
-    }
-
-    this.tempMarkerStyles = {
-      color: '#fff',
-      backgroundColor: '#000',
-      ...options.focusMarkedStyles
-    }
+    this.MARKED_CLASSNAME = options.markedClassName
+    this.TEMP_MARKED_CLASSNAME = options.selectedClassName
+    this.FOUCE_MARKED_CLASSNAME = options.focusMarkedClassName
 
     this.options = options || {}
+
+    this.btnWrapper = null
 
     // 所有标记文本, 格式为: {parentClassName: [Marker, Marker, ...]}, 最后转换成json字符串保存到数据库
     this.selectedMarkers = {}
@@ -106,7 +66,7 @@ class WebTextMarker {
     this.tempMarkerInfo = {}
 
     // 要删除的标记 id
-    this.deleteId = ''
+    this.currentId = ''
 
     // 是否已标记
     this.isMarked = false
@@ -123,7 +83,6 @@ class WebTextMarker {
   init() {
     const {
       defaultMarkers,
-      btnStyles,
       debug
     } = this.options
 
@@ -133,8 +92,6 @@ class WebTextMarker {
     // 给每个节点加上特殊标识, 方便后面操作
     setMarkClassName(document.body)
 
-    // 创建按钮节点
-    createBtnDom(this, btnStyles)
 
     // 创建调试节点
     if (debug) {
@@ -227,10 +184,10 @@ class WebTextMarker {
     if (target.className.indexOf(this.MARKED_CLASSNAME) > -1) {
       this.removeFocusStyle()
       target.className = `${this.MARKED_CLASSNAME} ${this.FOUCE_MARKED_CLASSNAME}`
-      setDomStyles(target, this.focusMarkedStyles)
-      setDomDisplay(this.btn_mark, 'none')
-      setDomDisplay(this.btn_delete, 'block')
-      this.deleteId = e.target.id
+
+      setDomDisplay(document.getElementById(this.options.btnMarkID), 'none')
+      setDomDisplay(document.getElementById(this.options.btnDeleteID), 'block')
+      this.currentId = e.target.id
       this.isMarked = true
       this.tempMarkDom = target
       setTimeout(() => {
@@ -240,11 +197,11 @@ class WebTextMarker {
     }
     this.tempMarkDom = null
     this.isMarked = false
+    this.hide()
   }
 
-  // 鼠标抬起事件
+  // 鼠标抬起事件, 在移动端是由 handleSelectionChange 触发
   handleMouseUp() {
-
     if (this.userAgent.isPC) {
 
       if (this.checkNoSelectionText()) {
@@ -268,14 +225,13 @@ class WebTextMarker {
     const {
       commonAncestorContainer
     } = this.selectedText.getRangeAt(0)
-    setDomDisplay(this.btn_mark, 'block')
-    setDomDisplay(this.btn_delete, 'none')
+    setDomDisplay(document.getElementById(this.options.btnMarkID), 'block')
+    setDomDisplay(document.getElementById(this.options.btnDeleteID), 'none')
 
     const {
       anchorOffset,
       focusOffset
     } = this.selectedText
-
 
     const startIndex = Math.min(anchorOffset, focusOffset)
     const endIndex = Math.max(anchorOffset, focusOffset)
@@ -286,7 +242,7 @@ class WebTextMarker {
     if (this.userAgent.isPC) {
       const text = this.selectedText.toString()
       const rang = this.selectedText.getRangeAt(0)
-      const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id, this.tempMarkerStyles)
+      const span = setTextSelected(this.TEMP_MARKED_CLASSNAME, text, this.tempMarkerInfo.id)
       rang.surroundContents(span)
     }
 
@@ -294,8 +250,9 @@ class WebTextMarker {
   }
 
   hide() {
-    setDomDisplay(this.btn_Box, 'none')
+    setDomDisplay(this.btnWrapper, 'none')
     this.removeFocusStyle()
+    this.currentId = null
     if (this.userAgent.isPC) {
       const tempDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0]
       if (!tempDom || tempDom.className.indexOf(this.MARKED_CLASSNAME) > -1) return
@@ -304,12 +261,17 @@ class WebTextMarker {
     } else {
       this.tempMarkDom = null
     }
-
-
   }
 
+  // 显示操作按钮
   show() {
-    setDomDisplay(this.btn_Box, 'flex')
+    if(!this.btnWrapper){
+      this.btnWrapper = document.getElementById(this.options.btnWrapperID)
+    }
+    if(!this.arrow){
+      this.arrow = document.getElementById(this.options.btnArrowID)
+    }
+    setDomDisplay(this.btnWrapper, 'flex')
     let tempDomAttr = null
     let left = '50%'
     let top = 0
@@ -330,17 +292,82 @@ class WebTextMarker {
     }
 
     if (this.userAgent.isPC) {
-      this.btn_Box.style.top = top + window.scrollY - 50 + 'px'
+      left = Math.min(window.innerWidth - 30, Math.max(10, left - 15)) 
+      this.btnWrapper.style.top = top + window.scrollY - 50 + 'px'
       this.arrow.style.left = left + 'px'
     } else {
       top = tempDom ? top + window.scrollY - 50 : this.touch.pageY - 80
       left = tempDom ? left : this.touch.pageX
       this.debug_event.innerHTML = top
-      this.btn_Box.style.top = top + 'px'
+      this.btnWrapper.style.top = top + 'px'
       this.arrow.style.left = left + 'px'
     }
   }
 
+  // 重新设置当前节点标记信息, domClassName 为当前节点 className
+  resetMarker(domClassName) {
+    const dom = document.getElementsByClassName(domClassName)[0]
+    const newMarkerArr = []
+    let preNodeLength = 0
+    for (let i = 0; i < dom.childNodes.length; i++) {
+      const node = dom.childNodes[i]
+      if (node.nodeName === '#text') {
+        preNodeLength = node.textContent.length
+      }
+      // childIndex 为什么是 i - 1 ? 根据当前已经标记节点索引, 在后面反序列的时候才能找到正确位置
+      // 比如当前节点内容为"xxx <标记节点>ooo</标记节点>", i 就是 1, 反序列的时候其实他是处于 0 的位置 
+      const childIndex = i - 1
+      this.selectedMarkers[domClassName].forEach(marker => {
+        if (dom.childNodes[i].id == marker.id) {
+          newMarkerArr.push(new Marker(marker.id, '', childIndex, preNodeLength, preNodeLength + node.textContent.length))
+        }
+      })
+    }
+    if (newMarkerArr.length > 0) {
+      this.selectedMarkers[domClassName] = newMarkerArr
+    } else {
+      delete this.selectedMarkers[domClassName]
+    }
+  }
+
+  // 设置默认选中数据
+  setDefaultMarkers() {
+    const defaultMarkers = this.selectedMarkers
+    Object.keys(defaultMarkers).forEach(className => {
+      const dom = document.getElementsByClassName(className)[0]
+      if (!dom) return
+      defaultMarkers[className].forEach(marker => {
+        const currentNode = dom.childNodes[marker.childIndex]
+        currentNode.splitText(marker.start);
+        const nextNode = currentNode.nextSibling;
+        nextNode.splitText(marker.end - marker.start)
+        const markedNode = setTextSelected(this.MARKED_CLASSNAME, nextNode.textContent, marker.id)
+        dom.replaceChild(markedNode, nextNode)
+      })
+    })
+  }
+
+  // 判断当前选中内容所包含的节点数量
+  checkSelectionCount() {
+    // 判断是否选中了多个， 如果只选中了一个节点 nodeType === 3
+    // 还有一种判断方式, getRangeAt(0).endContainer !== getRangeAt(0).startContainer 意味着选中了多个节点
+    return this.selectedText.getRangeAt(0).endContainer === this.selectedText.getRangeAt(0).startContainer
+  }
+
+  // 判断当前是否有选中文本
+  checkNoSelectionText() {
+    return this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt
+  }
+
+  // 移除焦点样式
+  removeFocusStyle() {
+    const focusMarker = document.getElementsByClassName(this.FOUCE_MARKED_CLASSNAME)[0]
+    if (focusMarker) {
+      focusMarker.className = this.MARKED_CLASSNAME
+    }
+  }
+
+  // 标记选中文本
   mark(e) {
     e.stopPropagation()
     const {
@@ -349,13 +376,10 @@ class WebTextMarker {
     if (this.userAgent.isPC) {
       const tempMarkDom = document.getElementsByClassName(this.TEMP_MARKED_CLASSNAME)[0]
       tempMarkDom.className = this.MARKED_CLASSNAME
-      Object.keys(this.markedStyles).forEach(key => {
-        tempMarkDom.style[key] = this.markedStyles[key]
-      })
     } else {
       const text = this.selectedText.toString()
       const rang = this.selectedText.getRangeAt(0)
-      const span = setTextSelected(this.MARKED_CLASSNAME, text, this.tempMarkerInfo.id, this.markedStyles)
+      const span = setTextSelected(this.MARKED_CLASSNAME, text, this.tempMarkerInfo.id)
       rang.surroundContents(span);
     }
 
@@ -370,82 +394,25 @@ class WebTextMarker {
     this.hide()
   }
 
-  resetMarker(parentClassName) {
-    const dom = document.getElementsByClassName(parentClassName)[0]
-    const newMarkerArr = []
-    let preNodeLength = 0
-    for (let i = 0; i < dom.childNodes.length; i++) {
-      const node = dom.childNodes[i]
-      if (node.nodeName === '#text') {
-        preNodeLength = node.textContent.length
-      }
-      // childIndex 为什么是 i - 1 ? 根据当前已经标记节点索引, 在后面反序列的时候才能找到正确位置
-      // 比如当前节点内容为"xxx <标记节点>ooo</标记节点>", i 就是 1, 反序列的时候其实他是处于 0 的位置 
-      const childIndex = i - 1
-      this.selectedMarkers[parentClassName].forEach(marker => {
-        if (dom.childNodes[i].id == marker.id) {
-          newMarkerArr.push(new Marker(marker.id, '', childIndex, preNodeLength, preNodeLength + node.textContent.length))
-        }
-      })
-    }
-    if (newMarkerArr.length > 0) {
-      this.selectedMarkers[parentClassName] = newMarkerArr
-    } else {
-      delete this.selectedMarkers[parentClassName]
-    }
-  }
-
-  save() {
-    if (this.options.onSave) {
-      this.options.onSave(this.selectedMarkers)
-    }
-    this.hide()
-  }
-
-  del(e) {
-    e.preventDefault()
-    if (this)
-      this.tempMarkDom = null
-    const dom = document.getElementById(this.deleteId)
+  // 删除当前标记
+  del() {
+    if(!this.currentId) return
+    this.tempMarkDom = null
+    const dom = document.getElementById(this.currentId)
     const className = dom.parentNode.className.split(' ')
     const parentClassName = className[className.length - 1]
     mergeTextNode(dom)
     this.resetMarker(parentClassName)
-    this.save()
   }
 
-  setDefaultMarkers() {
-    const defaultMarkers = this.selectedMarkers
-    Object.keys(defaultMarkers).forEach(className => {
-      const dom = document.getElementsByClassName(className)[0]
-      if(!dom) return
-      defaultMarkers[className].forEach(marker => {
-        const currentNode = dom.childNodes[marker.childIndex]
-        currentNode.splitText(marker.start);
-        const nextNode = currentNode.nextSibling;
-        nextNode.splitText(marker.end - marker.start)
-        const markedNode = setTextSelected(this.MARKED_CLASSNAME, nextNode.textContent, marker.id, this.markedStyles)
-        dom.replaceChild(markedNode, nextNode)
-      })
-    })
+  // 返回当前选中标记ID
+  getCurrentId(){
+    return this.currentId
   }
 
-  checkSelectionCount() {
-    // 判断是否选中了多个， 如果只选中了一个节点 nodeType === 3
-    // 还有一种判断方式, getRangeAt(0).endContainer !== getRangeAt(0).startContainer 意味着选中了多个节点
-    return this.selectedText.getRangeAt(0).endContainer === this.selectedText.getRangeAt(0).startContainer
-  }
-
-  checkNoSelectionText() {
-    return this.selectedText.toString().length === 0 || !this.selectedText.getRangeAt
-  }
-
-  removeFocusStyle() {
-    const focusMarker = document.getElementsByClassName(this.FOUCE_MARKED_CLASSNAME)[0]
-    if (focusMarker) {
-      focusMarker.className = this.MARKED_CLASSNAME
-      setDomStyles(focusMarker, this.markedStyles)
-    }
+  // 返回当前页所有已标记数据
+  getAllMarkes() {
+    return this.selectedMarkers
   }
 
 }

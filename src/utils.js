@@ -1,4 +1,5 @@
 export const setDomDisplay = (dom, value) => {
+  if(!dom) return
   dom.style.display = value
 }
 
@@ -6,16 +7,11 @@ export const setuuid = () => {
   return new Date().getTime()
 }
 
-export const setTextSelected = (className, text, id, styles) => {
+export const setTextSelected = (className, text, id) => {
   const span = document.createElement('span')
   span.className = className
   span.id = id
   span.innerHTML = text
-  if (styles) {
-    Object.keys(styles).forEach(key => {
-      span.style[key] = styles[key]
-    })
-  }
   return span
 }
 
@@ -89,3 +85,14 @@ export const setDomStyles = (dom, styles) => {
     dom.style[key] = styles[key]
   })
 }
+
+export const loadStyles = url => {
+  var link = document.createElement('link');
+  link.rel = 'stylesheet';
+  link.type = 'text/css';
+  link.href = url;
+  var head = document.getElementsByTagName('head')[0];
+  head.appendChild(link);
+}
+
+export const getElementById = id => document.getElementById(id)

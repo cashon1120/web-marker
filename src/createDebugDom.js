@@ -1,5 +1,4 @@
 import {setDomStyles} from './utils'
-
 const createDebugDom = textMarker => {
     const styles = {
       position: 'fixed',
